@@ -1,0 +1,18 @@
+schema_version: 1
+skill_key: finance-ar-processing
+semantic_version: 1.0.0
+name: 应收账款处理
+purpose: 基于当前授权材料处理应收账款与发票咨询，输出有来源的账款核对结论。
+allowed_roles: [ar_specialist]
+inputs: [mission_context, invoice_request, account_record]
+outputs: [ar_summary, invoice_detail, evidence, missing_information]
+procedure:
+  - 读取客户邮件与授权账款资料
+  - 提取发票请求关键信息
+  - 区分可验证数字与推断
+  - 输出账款核对结论和缺失数据
+tools: []
+permissions: {data_scope: current_mission, external_write: false}
+quality_gates:
+  - 关键数字必须有来源
+  - 不推断未提供的账款明细

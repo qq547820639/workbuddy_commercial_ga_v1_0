@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from workbuddy.db.models import Artifact
+from workbuddy.services.common import content_hash
+
 
 def headers(tenant="00000000-0000-0000-0000-000000000001"):
     return {"X-Tenant-ID": tenant, "X-Actor-ID": "owner"}
@@ -65,3 +68,83 @@ def test_mail_and_operation_idempotency(client):
     a = client.post("/v1/inbox/messages", headers=headers(), json=payload).json()
     b = client.post("/v1/inbox/messages", headers=headers(), json=payload).json()
     assert a["id"] == b["id"]
+
+
+def test_complete_flow_with_supporting_team_collaboration(client, monkeypatch):
+    """End-to-end multi-team collaboration: when the dispatch LLM returns supporting
+    team keys, confirm_dispatch auto-opens PENDING collaboration requests; the receiving
+    team workspace surfaces them; and the accept → start → complete loop closes back
+    through the team API endpoints with the artifact linked to the primary mission."""
+    from workbuddy.services import model_gateway
+
+    real_deterministic = model_gateway.ModelGateway._deterministic
+
+    def patched_deterministic(task_type, payload):
+        data = real_deterministic(task_type, payload)
+        if task_type == "dispatch":
+            data["supporting_team_keys"] = ["customer_success"]
+        return data
+
+    monkeypatch.setattr(model_gateway.ModelGateway, "_deterministic", staticmethod(patched_deterministic))
+
+    # Bootstrap + dispatch + confirm creates the primary mission and auto-opens a
+    # PENDING CollaborationRequest toward customer_success.
+    assert client.post("/v1/demo/bootstrap", headers=headers()).status_code == 200
+    inbox = client.get("/v1/inbox", headers=headers()).json()
+    sales = next(m for m in inbox if m["provider_message_id"] == "demo:sales:1")
+    decision_id = sales["dispatch"]["id"]
+    r = client.post(f"/v1/dispatch/{decision_id}/confirm", headers=headers(), json={"team_key": "sales_growth"})
+    assert r.status_code == 201
+    mission = r.json()
+
+    # The receiving team (customer_success) workspace surfaces the pending collaboration.
+    cs_collabs = client.get("/v1/teams/customer_success/collaborations?role=receiving", headers=headers()).json()
+    assert len(cs_collabs) == 1
+    collab = cs_collabs[0]
+    assert collab["status"] == "PENDING"
+    assert collab["mission_id"] == mission["id"]
+    collab_id = collab["id"]
+
+    # The same collaboration is visible in the full workspace aggregation.
+    cs_workspace = client.get("/v1/teams/customer_success/workspace", headers=headers()).json()
+    assert any(c["id"] == collab_id for c in cs_workspace["collaborations"])
+
+    # The sending team (sales_growth) also sees the outgoing request.
+    sales_sending = client.get("/v1/teams/sales_growth/collaborations?role=sending", headers=headers()).json()
+    assert any(c["id"] == collab_id for c in sales_sending)
+
+    # Accept → start via the team API endpoints (Task 6 collaboration lifecycle).
+    accepted = client.post(f"/v1/teams/customer_success/collaborations/{collab_id}/accept", headers=headers())
+    assert accepted.status_code == 200
+    assert accepted.json()["status"] == "ACCEPTED"
+    started = client.post(f"/v1/teams/customer_success/collaborations/{collab_id}/start", headers=headers())
+    assert started.status_code == 200
+    assert started.json()["status"] == "IN_PROGRESS"
+
+    # The receiving team produces an Artifact in the primary mission scope and links it back.
+    # There is no public ad-hoc artifact-creation endpoint, so it is recorded directly.
+    artifact_content = {"summary": "客户成功团队回传的协作结论"}
+    with client.app.state.SessionLocal() as session:
+        artifact = Artifact(
+            tenant_id=headers()["X-Tenant-ID"], mission_id=mission["id"],
+            work_item_id=None, agent_run_id=None,
+            artifact_type="analysis", title="CS 协作交付",
+            content=artifact_content, content_hash=content_hash(artifact_content),
+        )
+        session.add(artifact); session.commit()
+        artifact_id = artifact.id
+
+    # Complete the loop and verify the artifact is linked back to the collaboration.
+    completed = client.post(
+        f"/v1/teams/customer_success/collaborations/{collab_id}/complete",
+        headers=headers(), json={"artifact_id": artifact_id},
+    )
+    assert completed.status_code == 200
+    completed_body = completed.json()
+    assert completed_body["status"] == "COMPLETED"
+    assert completed_body["response"]["artifact_id"] == artifact_id
+    assert completed_body["response"]["artifact_title"] == "CS 协作交付"
+
+    # The sending team workspace now reflects the completed collaboration.
+    sales_collabs = client.get("/v1/teams/sales_growth/collaborations?role=sending", headers=headers()).json()
+    assert any(c["id"] == collab_id and c["status"] == "COMPLETED" for c in sales_collabs)

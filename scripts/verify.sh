@@ -11,11 +11,11 @@ python -m compileall -q src migrations scripts
 printf '\n[2/12] Automated tests\n'
 pytest -q -p no:cacheprovider
 
-printf '\n[3/12] Empty-database migrations 0001-0019\n'
+printf '\n[3/12] Empty-database migrations 0001-0020\n'
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP" /tmp/workbuddy_ga_ui.js' EXIT
 WORKBUDDY_DATABASE_URL="sqlite:///$TMP/migration.db" alembic upgrade head
-[[ "$(WORKBUDDY_DATABASE_URL="sqlite:///$TMP/migration.db" alembic current)" == *"0019_attestation_signing"* ]]
+[[ "$(WORKBUDDY_DATABASE_URL="sqlite:///$TMP/migration.db" alembic current)" == *"0020_team_tool_allowlist_and_collab_state"* ]]
 
 printf '\n[4/12] Generate and validate OpenAPI\n'
 python scripts/generate_openapi.py

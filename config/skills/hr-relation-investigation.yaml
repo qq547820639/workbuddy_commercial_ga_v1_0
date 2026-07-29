@@ -1,0 +1,19 @@
+schema_version: 1
+skill_key: hr-relation-investigation
+semantic_version: 1.0.0
+name: 员工关系调查
+purpose: 基于当前授权材料调查员工关系问题，输出有来源的事实和影响评估。
+allowed_roles: [relation_specialist]
+inputs: [mission_context, employee_feedback, relation_issue]
+outputs: [investigation_findings, impact_assessment, evidence]
+procedure:
+  - 收集经授权的事实与反馈
+  - 区分单次事件与历史趋势
+  - 识别投诉、纠纷和潜在风险
+  - 输出调查结论和缺失数据
+tools: []
+permissions: {data_scope: current_mission, external_write: false}
+quality_gates:
+  - 调查结论必须有来源
+  - 不推断未表达的员工意图
+  - 涉及处分和解雇必须升级审批

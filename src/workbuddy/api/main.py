@@ -590,10 +590,12 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
     from workbuddy.api.pilot_routes import router as pilot_router
     from workbuddy.api.ops_routes import router as ops_router
     from workbuddy.api.commercial_routes import router as commercial_router
+    from workbuddy.api.team_routes import router as team_router
     app.include_router(beta_router)
     app.include_router(pilot_router)
     app.include_router(ops_router)
     app.include_router(commercial_router)
+    app.include_router(team_router)
     return app
 
 

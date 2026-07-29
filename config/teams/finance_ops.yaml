@@ -1,0 +1,59 @@
+schema_version: 1
+team_key: finance_ops
+name: 财务与运营专家团
+version: 1
+status: draft
+mission: 处理财务与运营相关邮件，包括账款查询、发票、报销、预算、财务报表咨询，以合规和可追踪方式守护资金与数据边界。
+lead_role:
+  key: finance_director
+  name: 财务主理人
+  responsibilities: [邮件分级与归属确认, 选择标准工作流, 协调应收应付处理, 审核对外沟通, 管理升级与审批]
+in_scope: [应收账款查询, 应付账款处理, 发票咨询, 报销流程, 预算咨询, 财务报表解读, 税务基本问题]
+out_of_scope: [审计意见, 投资决策, 税务筹划, 未经审批的实际付款]
+routing_rules:
+  positive_signals: [发票, 账款, 应收, 应付, 报销, 预算, 财务, 报表, 对账, 付款, 收款, 税务, 增值税]
+  negative_signals: [审计, 投资, 融资]
+default_workflows:
+  - key: invoice_inquiry
+    name: 发票咨询处理
+    trigger: 发票、开票
+    required_inputs: [邮件线程, 客户身份, 发票请求详情]
+    work_items:
+      - key: triage
+        role: finance_director
+        skill: finance-lead-triage@1.0.0
+      - key: processing
+        role: ar_specialist
+        skill: finance-ar-processing@1.0.0
+        depends_on: [triage]
+      - key: customer_reply
+        role: finance_communicator
+        skill: finance-communication@1.0.0
+        depends_on: [processing]
+    approval_triggers: [external_send, payment_execution]
+  - key: payment_request
+    name: 付款申请处理
+    trigger: 付款、报销、打款
+    required_inputs: [邮件线程, 付款方信息, 付款金额与用途]
+    work_items:
+      - key: triage
+        role: finance_director
+        skill: finance-lead-triage@1.0.0
+      - key: processing
+        role: ap_specialist
+        skill: finance-ap-processing@1.0.0
+        depends_on: [triage]
+      - key: internal_communication
+        role: finance_communicator
+        skill: finance-communication@1.0.0
+        depends_on: [processing]
+    approval_triggers: [payment_execution, budget_overrun, external_send]
+quality_gates:
+  - 关键数字 evidence 覆盖率 100%
+  - 无来源商业数字 0
+  - 未审批付款不执行
+  - 财务数据只在当前事项范围内使用
+memory_policy:
+  retain: [财务政策摘要, 历史账单摘要]
+  do_not_retain: [完整银行卡号, 客户税务号]
+metrics: [账单处理时间, 发票准确率, 付款合规率]
