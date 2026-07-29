@@ -1,0 +1,11 @@
+.git
+.github
+.venv
+__pycache__
+.pytest_cache
+*.pyc
+*.db
+.env
+var
+RELEASE_MANIFEST.json
+docs/assets

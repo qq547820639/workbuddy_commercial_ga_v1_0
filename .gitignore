@@ -1,0 +1,56 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+.eggs/
+build/
+dist/
+.installed.cfg
+*.manifest
+
+# --- Virtual envs ---
+.venv/
+venv/
+env/
+ENV/
+
+# --- Local databases ---
+*.db
+*.sqlite
+*.sqlite3
+workbuddy.db
+
+# --- Secrets / env ---
+.env
+.env.*
+!.env.example
+
+# --- Logs / caches ---
+*.log
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# --- Terraform ---
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+crash.log
+terraform.tfplan
+
+# --- Node ---
+node_modules/
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- IDE ---
+.idea/
+.vscode/
+*.swp

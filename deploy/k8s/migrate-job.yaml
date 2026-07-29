@@ -1,0 +1,17 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: workbuddy-migrate
+  namespace: workbuddy
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: ghcr.io/your-org/workbuddy:0.4.0
+          command: ["alembic", "upgrade", "head"]
+          envFrom:
+            - configMapRef: {name: workbuddy-config}
+            - secretRef: {name: workbuddy-secrets}

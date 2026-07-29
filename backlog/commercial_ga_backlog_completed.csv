@@ -1,0 +1,24 @@
+id,workstream,task,status,acceptance
+GA-001,Organization,Provision isolated tenant,done,Admin CLI creates tenant and seed under tenant context
+GA-002,Organization,Invite and role-manage users,done,Owner API enforces tenant and user quota
+GA-003,Pricing,Reference product plan catalog,done,Versioned CNY-fen plans are marked reference-only by default
+GA-004,Subscription,Trial and paid subscription state machine,done,Paid activation requires approved pricing and external reference
+GA-005,Metering,Idempotent usage records,done,Model calls AgentRuns and verified live sends are metered
+GA-006,Entitlements,Quota reporting and live-send enforcement,done,Usage summary exposes included consumed and overage values
+GA-007,Billing,Invoice draft generation,done,Base and overage lines are deterministic and hash bound
+GA-008,Billing,Invoice status and payment evidence,done,PAID requires provider reference or manual evidence
+GA-009,Onboarding,Customer onboarding state machine,done,Stages cannot be skipped and checklist is enforced
+GA-010,Support,P0-P3 ticket SLA,done,SLA due time and audited resolution are implemented
+GA-011,Status,Service incident lifecycle,done,Public update history and resolution are retained
+GA-012,Compliance,Immutable document versions,done,Published docs have content hash and artifact reference
+GA-013,Compliance,Tenant agreement binding,done,Acceptance binds exact document hash
+GA-014,Value,Customer value metrics,done,Dated metrics are persisted per tenant
+GA-015,Release,Commercial Value and GA evidence gates,done,Required evidence is verified and role governed
+GA-016,Release,Snapshot-bound attestations,done,New evidence invalidates prior attestations
+GA-017,Release,GA Go-No-Go report,done,Checks linked Production Pilot onboarding subscription incidents and documents
+GA-018,Data,Tenant exit export,done,Exports records without destructive deletion
+GA-019,UI,Commercial operations console,done,Plans usage onboarding support compliance invoices and GA are visible
+GA-020,API,OpenAPI commercial endpoints,done,Generated OpenAPI includes all commercial routes
+GA-021,Database,Alembic 0010 and forced RLS,done,All new tenant tables are migrated and isolated
+GA-022,Testing,Commercial automated regression,done,Subscription onboarding support compliance and GA flows are tested
+GA-023,Documentation,Commercial operations and legal boundary docs,done,Runbooks matrices and non-legal templates are included

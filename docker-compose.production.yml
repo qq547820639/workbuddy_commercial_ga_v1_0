@@ -1,0 +1,27 @@
+name: workbuddy-commercial-ga
+services:
+  migrate:
+    image: ${WORKBUDDY_IMAGE:?set WORKBUDDY_IMAGE}
+    env_file: [.env.production]
+    command: ["alembic", "upgrade", "head"]
+  api:
+    image: ${WORKBUDDY_IMAGE:?set WORKBUDDY_IMAGE}
+    restart: unless-stopped
+    env_file: [.env.production]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    command: ["uvicorn", "workbuddy.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
+    read_only: true
+    tmpfs: [/tmp]
+    ports: ["127.0.0.1:8000:8000"]
+    security_opt: ["no-new-privileges:true"]
+  worker:
+    image: ${WORKBUDDY_IMAGE:?set WORKBUDDY_IMAGE}
+    restart: unless-stopped
+    env_file: [.env.production]
+    depends_on:
+      migrate: {condition: service_completed_successfully}
+    command: ["workbuddy-worker"]
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]

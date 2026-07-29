@@ -1,0 +1,184 @@
+name: WorkBuddy Production Pilot CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Default permissions are read-only. Jobs that need OIDC or attestations declare
+# their own expanded permissions at the job level. No long-lived GCP service
+# account keys are stored as repository secrets: terraform jobs authenticate to
+# GCP via Workload Identity Federation (see infra/terraform/modules/workload_identity).
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: workbuddy
+          POSTGRES_PASSWORD: workbuddy-ci
+          POSTGRES_DB: workbuddy
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U workbuddy -d workbuddy"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: pip install -e '.[dev]'
+      - run: pytest -q
+      - name: PostgreSQL migrations and forced RLS
+        env:
+          WORKBUDDY_DATABASE_URL: postgresql+psycopg://workbuddy:workbuddy-ci@localhost:5432/workbuddy
+        run: |
+          alembic upgrade head
+          python - <<'PY'
+          from sqlalchemy import create_engine, text
+          import os
+          e=create_engine(os.environ['WORKBUDDY_DATABASE_URL'])
+          required={'pilot_programs','gate_evidence','gate_attestations','operational_drills'}
+          with e.connect() as c:
+              rows=c.execute(text("select tablename from pg_tables where schemaname='public' and rowsecurity=true")).scalars().all()
+              assert required.issubset(set(rows)), (required, rows)
+          PY
+      - run: ./scripts/verify.sh
+
+  # Build the container image and emit SLSA build provenance plus a supply chain
+  # attestation. Provenance ties the image digest back to the exact workflow
+  # run, commit and source it was built from.
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      # OIDC is required for keyless signing and for issuing attestations.
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push image
+        id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+            ghcr.io/${{ github.repository }}:latest
+          provenance: false
+          sbom: false
+      - name: Extract image digest
+        id: digest
+        run: echo "digest=${{ steps.build.outputs.digest }}" >> "$GITHUB_OUTPUT"
+      # SLSA provenance generation: produces a SLSA v0.2 build provenance
+      # attestation bound to the image digest and signed via Sigstore keyless.
+      - name: Generate SLSA build provenance
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-name: ghcr.io/${{ github.repository }}
+          subject-digest: ${{ steps.digest.outputs.digest }}
+          push-to-registry: true
+      # Generate an SBOM and attest it as a supply chain attestation so consumers
+      # can verify the image's components.
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ghcr.io/${{ github.repository }}@${{ steps.digest.outputs.digest }}
+          format: spdx-json
+          output-file: sbom.spdx.json
+      - name: Attest supply chain SBOM
+        uses: actions/attest@v1
+        with:
+          subject-name: ghcr.io/${{ github.repository }}
+          subject-digest: ${{ steps.digest.outputs.digest }}
+          predicate-type: https://spdx.dev/Document
+          predicate-path: sbom.spdx.json
+          push-to-registry: true
+
+  # Lint and validate Terraform on every push and PR. No cloud credentials are
+  # required for fmt/validate.
+  terraform-fmt-validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+          terraform_wrapper: false
+      - name: terraform fmt
+        run: terraform fmt -check -recursive
+      - name: terraform init
+        run: terraform init -backend=false
+      - name: terraform validate
+        run: terraform validate
+
+  # Run terraform plan on pull requests only. Authenticates to GCP via Workload
+  # Identity Federation (OIDC) - no stored GCP service account key. The plan
+  # output is posted back to the PR for review.
+  terraform-plan:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    defaults:
+      run:
+        working-directory: infra/terraform
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.7.0"
+          terraform_wrapper: false
+      # OIDC -> GCP short-lived credential via Workload Identity Federation.
+      # Repository variables (non-secret) supply the WIF provider and SA email.
+      - name: Authenticate to GCP (Workload Identity Federation)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_TERRAFORM_SERVICE_ACCOUNT }}
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+      - name: terraform init
+        run: terraform init
+      - name: terraform validate
+        run: terraform validate
+      - name: terraform plan
+        id: plan
+        run: |
+          terraform plan -no-color -out=tfplan > tfplan.txt 2>&1 || true
+          cat tfplan.txt
+      - name: Post plan to PR
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let plan = '';
+            try { plan = fs.readFileSync('infra/terraform/tfplan.txt', 'utf8'); } catch (e) {}
+            const body = `### Terraform Plan\n\n\`\`\`hcl\n${plan.slice(0, 60000)}\n\`\`\``;
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body
+            });

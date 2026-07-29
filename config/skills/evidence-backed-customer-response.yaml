@@ -1,0 +1,12 @@
+schema_version: 1
+skill_key: evidence-backed-customer-response
+semantic_version: 1.0.0
+name: 有证据的客户响应
+purpose: 生成诚实说明已知、未知、行动和下一更新时间的客户回复。
+allowed_roles: [customer_communicator]
+inputs: [impact_classification, resolution_evidence]
+outputs: [customer_draft, approval_items]
+procedure: [承认已知影响, 说明正在采取的行动, 不虚构根因, 标记退款补偿和日期承诺]
+tools: []
+permissions: {data_scope: current_mission, external_write: false}
+quality_gates: [退款赔偿和责任承认必须审批, 不得承诺未验证修复日期]

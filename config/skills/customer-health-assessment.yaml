@@ -1,0 +1,12 @@
+schema_version: 1
+skill_key: customer-health-assessment
+semantic_version: 1.0.0
+name: 客户健康评估
+purpose: 基于当前授权材料识别续约、采用和关系风险。
+allowed_roles: [service_analyst]
+inputs: [account_history, customer_feedback]
+outputs: [health_score, risk_factors, evidence]
+procedure: [收集经授权事实, 区分历史趋势与单次反馈, 输出风险因素和缺失数据]
+tools: [knowledge_reader]
+permissions: {data_scope: current_mission, external_write: false}
+quality_gates: [不跨客户读取数据, 评分因素可解释]

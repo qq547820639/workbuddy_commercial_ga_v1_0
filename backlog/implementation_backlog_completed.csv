@@ -1,0 +1,41 @@
+﻿ID,Priority,Area,Title,Acceptance Criteria,Milestone,Story Points,Status
+WB-001,P0,Product,冻结三个 Beta 专家团章程,章程包含使命、范围、工作流、审批和记忆策略；老板签字确认,Phase 0,3,COMPLETE
+WB-002,P0,Product,冻结 Mission/WorkItem/AgentRun 状态机,产品、后端、AI 和 QA 使用相同枚举与转换表,Phase 0,3,COMPLETE
+WB-003,P0,Architecture,确认持久工作流技术选型,完成 POC：等待、信号、重试、取消和恢复,Phase 0,5,ALPHA_COMPLETE
+WB-004,P0,Backend,建立 PostgreSQL 迁移工程,001_core.sql 可在空库执行并回滚；CI 验证,Sprint 1,5,COMPLETE
+WB-005,P0,Security,设计 tenant_id 与 RLS 策略,跨租户读取和写入自动化测试为 0 泄漏,Sprint 1,5,CODE_COMPLETE_LIVE_POSTGRES_PENDING
+WB-006,P0,Backend,实现 Mission Repository,支持幂等创建、乐观锁和按状态分页查询,Sprint 1,5,COMPLETE
+WB-007,P0,Backend,实现状态转换服务,非法跳转返回 422；版本冲突返回 409；追加审计事件,Sprint 1,5,COMPLETE
+WB-008,P0,Platform,实现 Transactional Outbox,业务变更和 outbox 同事务；支持失败重放,Sprint 1,8,COMPLETE
+WB-009,P0,Audit,实现追加式 AuditEvent,事件含 actor、correlation、causation 和哈希链,Sprint 1,5,COMPLETE
+WB-010,P0,Frontend,v3 前端改为 API 数据源,主看板不再读取 localStorage 业务状态,Sprint 1,8,COMPLETE
+WB-011,P0,Mail,建立 Gmail OAuth 最小权限流程,只读授权可连接、撤销并显示状态,Sprint 2,8,IMPLEMENTED_CREDENTIALS_PENDING
+WB-012,P0,Mail,实现 Gmail 初始同步,线程、消息、附件元数据幂等落库,Sprint 2,8,IMPLEMENTED_LIVE_TEST_PENDING
+WB-013,P0,Mail,实现 Gmail watch 与 history 增量同步,持久化 historyId；游标失效进入重同步,Sprint 2,8,IMPLEMENTED_CLOUD_SETUP_PENDING
+WB-014,P1,Mail,设计 Microsoft Graph 增量同步适配层,游标按文件夹保存；接口与 Gmail 统一,Sprint 2,5,COMPLETE
+WB-015,P0,Dispatch,定义 DispatchDecision Schema,包含主责团队、协作团队、风险、置信度、理由和缺失信息,Sprint 2,3,COMPLETE
+WB-016,P0,AI,实现调度影子模式,AI 只建议；用户确认或纠正；结果进入评估集,Sprint 2,8,COMPLETE
+WB-017,P0,Security,邮件不可信输入防护,邮件内容不能更改系统策略、Skill 权限和工具授权,Sprint 2,5,COMPLETE
+WB-018,P0,Backend,实现 Team Constitution Registry,章程版本不可变；任务绑定精确版本,Sprint 3,5,COMPLETE
+WB-019,P0,Backend,实现 WorkflowVersion Registry,发布、弃用和任务版本冻结可用,Sprint 3,5,COMPLETE
+WB-020,P0,AI,实现主理人接单判断,支持接受、补充信息、退回调度和阻断,Sprint 3,5,COMPLETE
+WB-021,P0,AI,实现结构化 Mission Planner,输出通过 JSON Schema 和领域规则校验,Sprint 3,8,ALPHA_COMPLETE
+WB-022,P0,Backend,实现 WorkItem 依赖校验,检测环、缺失依赖和重复 sequence_no,Sprint 3,5,COMPLETE
+WB-023,P0,Frontend,实现主理人计划编辑器,用户可修改任务、依赖、成员、Skill 和验收标准,Sprint 3,8,COMPLETE
+WB-024,P0,Skill,实现 SkillDefinition/SkillRelease Registry,发布版本不可变并计算内容哈希,Sprint 4,5,COMPLETE
+WB-025,P0,Agent,实现 AgentProfile Registry,岗位、团队、能力、记忆策略和状态可管理,Sprint 4,5,COMPLETE
+WB-026,P0,Agent,实现 AgentRun 生命周期,任务级输入快照、预算、超时、关闭和隔离,Sprint 4,8,COMPLETE
+WB-027,P0,Agent,实现 Run 输出提交,成果、证据和运行摘要在一个事务内保存,Sprint 4,5,COMPLETE
+WB-028,P0,AI,实现主理人验收器,逐条输出验收结果；可接受、返工或阻断,Sprint 4,8,ALPHA_COMPLETE
+WB-029,P0,Security,实现任务级 ToolGrant,Run 关闭或取消后临时授权立即失效,Sprint 5,8,COMPLETE
+WB-030,P0,Skill,实现声明式 Skill 上传与验证,不执行上传代码；Schema、权限和测试报告可见,Sprint 5,8,COMPLETE
+WB-031,P0,Approval,实现 Approval Policy Engine,金额、日期、合同、收件人和外部写操作正确触发审批,Sprint 6,8,ALPHA_COMPLETE
+WB-032,P0,Approval,审批绑定精确内容版本,正文、收件人、附件或参数变化后自动失效,Sprint 6,5,COMPLETE
+WB-033,P0,Operation,实现 ExternalOperation 状态机,幂等键、执行、核验、UNKNOWN 和人工恢复,Sprint 6,8,COMPLETE
+WB-034,P0,Mail,实现受审批邮件发送,只有 APPROVED 且哈希一致的操作可以发送,Sprint 6,8,SAFE_DEMO_ONLY
+WB-035,P0,QA,建立端到端黄金路径测试,真实邮件副本→规划→Run→验收→审批→模拟操作,Sprint 6,8,COMPLETE
+WB-036,P0,Security,建立越权与提示注入测试集,未授权工具调用和策略绕过均被拒绝,Sprint 6,8,ALPHA_COMPLETE
+WB-037,P1,Observability,建立 Mission/Run 指标与追踪,可按 correlation_id 追踪一次任务全链路,Sprint 6,5,ALPHA_COMPLETE
+WB-038,P1,Product,定义影子模式发布门,路由、风险漏报、事实准确和用户纠正指标有阈值,Beta,3,COMPLETE
+WB-039,P1,Operations,实现全局暂停和任务接管,老板可暂停公司、团队、Mission 或单个 Run,Beta,5,COMPLETE
+WB-040,P1,Compliance,定义数据保留和删除流程,删除请求可追踪且不破坏必须保留的审计证据,Beta,5,ALPHA_COMPLETE

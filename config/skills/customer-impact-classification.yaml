@@ -1,0 +1,12 @@
+schema_version: 1
+skill_key: customer-impact-classification
+semantic_version: 1.0.0
+name: 客户影响分级
+purpose: 评估客户问题的业务影响、紧迫性和升级级别。
+allowed_roles: [service_analyst]
+inputs: [mission_context]
+outputs: [impact_level, affected_scope, escalation]
+procedure: [读取客户邮件, 提取影响范围, 识别续约退款和法律信号, 输出分级]
+tools: [mail_reader]
+permissions: {data_scope: current_mission, external_write: false}
+quality_gates: [影响判断有客户原话来源, 不推断未表达损失]

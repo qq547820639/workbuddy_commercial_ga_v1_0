@@ -1,0 +1,71 @@
+groups:
+  - name: workbuddy-commercial-ga
+    rules:
+      - alert: WorkBuddyExternalOperationUnknown
+        expr: workbuddy_external_operations_unknown > 0
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: "WorkBuddy external operation is UNKNOWN"}
+      - alert: WorkBuddyOutboxBacklog
+        expr: workbuddy_outbox_pending > 100
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "WorkBuddy outbox backlog is growing"}
+      - alert: WorkBuddySyncFailures
+        expr: workbuddy_sync_runs_failed > 0
+        for: 15m
+        labels: {severity: warning}
+        annotations: {summary: "WorkBuddy mailbox synchronization failures detected"}
+      - alert: WorkBuddyOpenP0P1
+        expr: workbuddy_pilot_open_p0_p1 > 0
+        for: 1m
+        labels: {severity: critical}
+        annotations: {summary: "Production pilot has an open P0/P1 incident"}
+      # --- Commercial GA gate alerts (PRODUCTION / Commercial / GA gates) ---
+      # Active commercial subscriptions dropped to zero in production - GA remains
+      # NO_GO while there is no active trial/paid subscription (GA_RELEASE_GATES.md).
+      - alert: CommercialSubscriptionPastDue
+        expr: workbuddy_commercial_subscriptions_active == 0
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: "No active commercial subscriptions in production"}
+      # Open P0/P1 support tickets block the GA gate and require on-call response.
+      - alert: SupportTicketsP0P1Open
+        expr: workbuddy_support_tickets_p0_p1_open > 0
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: "Open P0/P1 support tickets detected"}
+      # Stale unpaid invoices indicate billing operations are not settling.
+      - alert: InvoiceUnpaidStale
+        expr: workbuddy_commercial_invoices_unpaid > 10
+        for: 10m
+        labels: {severity: warning}
+        annotations: {summary: "More than 10 unpaid commercial invoices are stale"}
+      # The GA gate requires at least 6 accountable attestations. Fewer means the
+      # gate cannot be signed and must remain NO_GO.
+      - alert: GAAttestationMissing
+        expr: workbuddy_ga_attestations_approved < 6
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: "Fewer than 6 GA attestations approved"}
+      # The Commercial gate requires at least 5 published compliance documents
+      # (terms, privacy, DPA, subprocessors, security whitepaper).
+      - alert: ComplianceDocumentsIncomplete
+        expr: workbuddy_compliance_documents_published < 5
+        for: 5m
+        labels: {severity: warning}
+        annotations: {summary: "Fewer than 5 compliance documents published"}
+      # On-call coverage check failed: a coverage gap exists for the next 7 days.
+      # The runtime exports workbuddy_oncall_coverage_complete (1 = covered, 0 = gap).
+      - alert: OnCallCoverageGap
+        expr: workbuddy_oncall_coverage_complete == 0
+        for: 5m
+        labels: {severity: critical}
+        annotations: {summary: "On-call coverage gap detected for the next 7 days"}
+      # The 30-day observation window was reset, restarting the incident-free clock
+      # required for the GA gate. Derived from audit events emitted on reset.
+      - alert: ObservationWindowReset
+        expr: increase(workbuddy_observation_window_resets_total[15m]) > 0
+        for: 0m
+        labels: {severity: warning}
+        annotations: {summary: "Production observation window was reset"}

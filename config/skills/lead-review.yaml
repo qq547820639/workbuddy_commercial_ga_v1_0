@@ -1,0 +1,19 @@
+schema_version: 1
+skill_key: lead-work-item-review
+semantic_version: 1.0.0
+name: 主理人工作项验收
+purpose: 按验收标准、证据和权限边界决定接受、返工或阻断。
+allowed_roles: [commercial_director, delivery_director, customer_success_director]
+inputs: [work_item, agent_run, artifact, evidence, acceptance_criteria]
+outputs: [decision, criteria_results, conflicts, revision_request, memory_candidates]
+procedure:
+  - 逐条检查验收标准
+  - 核验关键事实来源
+  - 区分事实、推断、建议与缺失信息
+  - 检查是否越权或超出任务范围
+  - 接受、返工或隔离成果
+tools: []
+permissions: {data_scope: current_mission, external_write: false}
+quality_gates:
+  - 未满足强制验收标准不得接受
+  - 无证据的关键事实不得进入最终成果

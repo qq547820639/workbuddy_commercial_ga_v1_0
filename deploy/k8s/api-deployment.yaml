@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: workbuddy-api
+  namespace: workbuddy
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: workbuddy-api}
+  template:
+    metadata:
+      labels: {app: workbuddy-api}
+    spec:
+      serviceAccountName: workbuddy
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile: {type: RuntimeDefault}
+      containers:
+        - name: api
+          image: ghcr.io/your-org/workbuddy:0.4.0
+          args: ["uvicorn", "workbuddy.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
+          ports: [{name: http, containerPort: 8000}]
+          envFrom:
+            - configMapRef: {name: workbuddy-config}
+            - secretRef: {name: workbuddy-secrets}
+          readinessProbe:
+            httpGet: {path: /health/ready, port: http}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /health/live, port: http}
+            periodSeconds: 20
+          resources:
+            requests: {cpu: 250m, memory: 384Mi}
+            limits: {cpu: "1", memory: 1Gi}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: {drop: ["ALL"]}
+          volumeMounts:
+            - {name: tmp, mountPath: /tmp}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: workbuddy-api
+  namespace: workbuddy
+spec:
+  selector: {app: workbuddy-api}
+  ports: [{name: http, port: 80, targetPort: http}]

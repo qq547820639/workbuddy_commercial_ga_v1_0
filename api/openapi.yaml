@@ -1,0 +1,4911 @@
+openapi: 3.1.0
+info:
+  title: WorkBuddy Expert Team OS
+  version: 1.0.0
+paths:
+  /:
+    get:
+      summary: Index
+      operationId: index__get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /health:
+    get:
+      summary: Health
+      operationId: health_health_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /health/live:
+    get:
+      summary: Health Live
+      operationId: health_live_health_live_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /health/ready:
+    get:
+      summary: Health Ready
+      operationId: health_ready_health_ready_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /auth/config:
+    get:
+      summary: Auth Config
+      operationId: auth_config_auth_config_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/dashboard:
+    get:
+      summary: Dashboard
+      operationId: dashboard_v1_dashboard_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/teams:
+    get:
+      summary: Teams
+      operationId: teams_v1_teams_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/skills:
+    get:
+      summary: Skills
+      operationId: skills_v1_skills_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/skills/upload:
+    post:
+      summary: Upload Skill
+      operationId: upload_skill_v1_skills_upload_post
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Body_upload_skill_v1_skills_upload_post'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/skills/{release_id}/publish:
+    post:
+      summary: Publish Skill Route
+      operationId: publish_skill_route_v1_skills__release_id__publish_post
+      parameters:
+      - name: release_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Release Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/inbox:
+    get:
+      summary: Inbox
+      operationId: inbox_v1_inbox_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/inbox/messages:
+    post:
+      summary: Add Message
+      operationId: add_message_v1_inbox_messages_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MailIn'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/inbox/{mail_id}/dispatch:
+    post:
+      summary: Dispatch
+      operationId: dispatch_v1_inbox__mail_id__dispatch_post
+      parameters:
+      - name: mail_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Mail Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/dispatch:
+    get:
+      summary: Dispatch List
+      operationId: dispatch_list_v1_dispatch_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/dispatch/{decision_id}/confirm:
+    post:
+      summary: Confirm
+      operationId: confirm_v1_dispatch__decision_id__confirm_post
+      parameters:
+      - name: decision_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Decision Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispatchConfirmIn'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/missions:
+    get:
+      summary: Missions
+      operationId: missions_v1_missions_get
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: team_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Team Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/missions/{mission_id}:
+    get:
+      summary: Mission Detail
+      operationId: mission_detail_v1_missions__mission_id__get
+      parameters:
+      - name: mission_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Mission Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/missions/{mission_id}/accept:
+    post:
+      summary: Accept
+      operationId: accept_v1_missions__mission_id__accept_post
+      parameters:
+      - name: mission_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Mission Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionAction'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/missions/{mission_id}/plan:
+    post:
+      summary: Plan
+      operationId: plan_v1_missions__mission_id__plan_post
+      parameters:
+      - name: mission_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Mission Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/missions/{mission_id}/approve-plan:
+    post:
+      summary: Plan Approve
+      operationId: plan_approve_v1_missions__mission_id__approve_plan_post
+      parameters:
+      - name: mission_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Mission Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionAction'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/missions/{mission_id}/start:
+    post:
+      summary: Mission Start
+      operationId: mission_start_v1_missions__mission_id__start_post
+      parameters:
+      - name: mission_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Mission Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionAction'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/work-items/{work_item_id}/start:
+    post:
+      summary: Item Start
+      operationId: item_start_v1_work_items__work_item_id__start_post
+      parameters:
+      - name: work_item_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Work Item Id
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/agent-runs/{run_id}/submit:
+    post:
+      summary: Run Submit
+      operationId: run_submit_v1_agent_runs__run_id__submit_post
+      parameters:
+      - name: run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Run Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentOutputIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/work-items/{work_item_id}/review:
+    post:
+      summary: Item Review
+      operationId: item_review_v1_work_items__work_item_id__review_post
+      parameters:
+      - name: work_item_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Work Item Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkItemReviewIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/missions/{mission_id}/lead-review:
+    post:
+      summary: Mission Review
+      operationId: mission_review_v1_missions__mission_id__lead_review_post
+      parameters:
+      - name: mission_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Mission Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VersionAction'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/work-items/{work_item_id}:
+    patch:
+      summary: Work Item Update
+      operationId: work_item_update_v1_work_items__work_item_id__patch
+      parameters:
+      - name: work_item_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Work Item Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkItemUpdateIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/missions/{mission_id}/dependencies:
+    post:
+      summary: Dependency Add
+      operationId: dependency_add_v1_missions__mission_id__dependencies_post
+      parameters:
+      - name: mission_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Mission Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DependencyIn'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/dependencies/{dependency_id}:
+    delete:
+      summary: Dependency Remove
+      operationId: dependency_remove_v1_dependencies__dependency_id__delete
+      parameters:
+      - name: dependency_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Dependency Id
+      responses:
+        '204':
+          description: Successful Response
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/tools:
+    get:
+      summary: Tools
+      operationId: tools_v1_tools_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/agent-runs/{run_id}/tools:
+    get:
+      summary: Run Tools
+      operationId: run_tools_v1_agent_runs__run_id__tools_get
+      parameters:
+      - name: run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Run Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/agent-runs/{run_id}/tools/{tool_key}/invoke:
+    post:
+      summary: Tool Invoke
+      operationId: tool_invoke_v1_agent_runs__run_id__tools__tool_key__invoke_post
+      parameters:
+      - name: run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Run Id
+      - name: tool_key
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Tool Key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ToolInvokeIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/collaborations:
+    get:
+      summary: Collaborations
+      operationId: collaborations_v1_collaborations_get
+      parameters:
+      - name: mission_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Mission Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/missions/{mission_id}/collaborations:
+    post:
+      summary: Collaboration Create
+      operationId: collaboration_create_v1_missions__mission_id__collaborations_post
+      parameters:
+      - name: mission_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Mission Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollaborationIn'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/collaborations/{request_id}/respond:
+    post:
+      summary: Collaboration Respond
+      operationId: collaboration_respond_v1_collaborations__request_id__respond_post
+      parameters:
+      - name: request_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Request Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollaborationResponseIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/memory:
+    get:
+      summary: Memory
+      operationId: memory_v1_memory_get
+      parameters:
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      summary: Memory Create
+      operationId: memory_create_v1_memory_post
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemoryProposalIn'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/memory/{record_id}/decision:
+    post:
+      summary: Memory Decision
+      operationId: memory_decision_v1_memory__record_id__decision_post
+      parameters:
+      - name: record_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Record Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemoryDecisionIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/approvals:
+    get:
+      summary: Approvals
+      operationId: approvals_v1_approvals_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/approvals/{approval_id}/decision:
+    post:
+      summary: Approval Decision
+      operationId: approval_decision_v1_approvals__approval_id__decision_post
+      parameters:
+      - name: approval_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Approval Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalDecisionIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/operations:
+    get:
+      summary: Operations
+      operationId: operations_v1_operations_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    post:
+      summary: Operation Prepare
+      operationId: operation_prepare_v1_operations_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperationPrepareIn'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/operations/{operation_id}/execute:
+    post:
+      summary: Operation Execute
+      operationId: operation_execute_v1_operations__operation_id__execute_post
+      parameters:
+      - name: operation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Operation Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperationExecuteIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/operations/{operation_id}/verify:
+    post:
+      summary: Operation Verify
+      operationId: operation_verify_v1_operations__operation_id__verify_post
+      parameters:
+      - name: operation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Operation Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperationVerifyIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/audit:
+    get:
+      summary: Audit
+      operationId: audit_v1_audit_get
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000
+          minimum: 1
+          default: 200
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/audit/verify:
+    get:
+      summary: Audit Verify
+      operationId: audit_verify_v1_audit_verify_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/outbox/publish:
+    post:
+      summary: Outbox Publish
+      operationId: outbox_publish_v1_outbox_publish_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/demo/bootstrap:
+    post:
+      summary: Demo Bootstrap
+      operationId: demo_bootstrap_v1_demo_bootstrap_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/demo/reset:
+    post:
+      summary: Demo Reset
+      operationId: demo_reset_v1_demo_reset_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/scheduler/tick:
+    post:
+      summary: Scheduler Run
+      operationId: scheduler_run_v1_scheduler_tick_post
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/metrics:
+    get:
+      summary: Metrics
+      operationId: metrics_v1_metrics_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/controls:
+    get:
+      summary: Controls
+      operationId: controls_v1_controls_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    post:
+      summary: Control Change
+      operationId: control_change_v1_controls_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ControlIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/privacy/export:
+    get:
+      summary: Privacy Export
+      operationId: privacy_export_v1_privacy_export_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/privacy/delete-operational-data:
+    post:
+      summary: Privacy Delete
+      operationId: privacy_delete_v1_privacy_delete_operational_data_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeleteOperationalDataIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/connectors/gmail/start:
+    get:
+      summary: Gmail Start
+      operationId: gmail_start_v1_connectors_gmail_start_get
+      parameters:
+      - name: enable_send
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Enable Send
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/connectors/gmail/callback:
+    get:
+      summary: Gmail Callback
+      operationId: gmail_callback_v1_connectors_gmail_callback_get
+      parameters:
+      - name: code
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Code
+      - name: state
+        in: query
+        required: true
+        schema:
+          type: string
+          title: State
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/connectors/gmail/accounts:
+    get:
+      summary: Gmail Accounts
+      operationId: gmail_accounts_v1_connectors_gmail_accounts_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/connectors/gmail/accounts/{account_id}/sync:
+    post:
+      summary: Gmail Sync
+      operationId: gmail_sync_v1_connectors_gmail_accounts__account_id__sync_post
+      parameters:
+      - name: account_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Account Id
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 500
+          minimum: 1
+          default: 50
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/connectors/gmail/accounts/{account_id}/watch:
+    post:
+      summary: Gmail Watch
+      operationId: gmail_watch_v1_connectors_gmail_accounts__account_id__watch_post
+      parameters:
+      - name: account_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Account Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/connectors/gmail/webhook:
+    post:
+      summary: Gmail Webhook
+      operationId: gmail_webhook_v1_connectors_gmail_webhook_post
+      parameters:
+      - name: token
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Token
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/agent-runs/{run_id}/execute:
+    post:
+      summary: Execute Run
+      operationId: execute_run_v1_agent_runs__run_id__execute_post
+      parameters:
+      - name: run_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Run Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentExecuteIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/skills/{release_id}/test:
+    post:
+      summary: Test Skill
+      operationId: test_skill_v1_skills__release_id__test_post
+      parameters:
+      - name: release_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Release Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SkillTestIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/model/invocations:
+    get:
+      summary: Model Invocations
+      operationId: model_invocations_v1_model_invocations_get
+      parameters:
+      - name: task_type
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Task Type
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000
+          minimum: 1
+          default: 200
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/quality:
+    get:
+      summary: Quality
+      operationId: quality_v1_quality_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/pilot/dispatch-metrics:
+    get:
+      summary: Dispatch Metrics
+      operationId: dispatch_metrics_v1_pilot_dispatch_metrics_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/dispatch/{decision_id}/feedback:
+    post:
+      summary: Add Dispatch Feedback
+      operationId: add_dispatch_feedback_v1_dispatch__decision_id__feedback_post
+      parameters:
+      - name: decision_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Decision Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DispatchFeedbackIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/pilot/sync-runs:
+    get:
+      summary: Sync Runs
+      operationId: sync_runs_v1_pilot_sync_runs_get
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000
+          minimum: 1
+          default: 200
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/policies/external-email:
+    get:
+      summary: Get External Email Policy
+      operationId: get_external_email_policy_v1_policies_external_email_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    put:
+      summary: Update External Email Policy
+      operationId: update_external_email_policy_v1_policies_external_email_put
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantPolicyIn'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/operations/{operation_id}/attempts:
+    get:
+      summary: Operation Attempts
+      operationId: operation_attempts_v1_operations__operation_id__attempts_get
+      parameters:
+      - name: operation_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Operation Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/beta/readiness:
+    get:
+      summary: Beta Readiness
+      operationId: beta_readiness_v1_beta_readiness_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/connectors/graph/start:
+    get:
+      summary: Graph Start
+      operationId: graph_start_v1_connectors_graph_start_get
+      parameters:
+      - name: enable_send
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Enable Send
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/connectors/graph/callback:
+    get:
+      summary: Graph Callback
+      operationId: graph_callback_v1_connectors_graph_callback_get
+      parameters:
+      - name: code
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Code
+      - name: state
+        in: query
+        required: true
+        schema:
+          type: string
+          title: State
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/connectors/graph/accounts:
+    get:
+      summary: Graph Accounts
+      operationId: graph_accounts_v1_connectors_graph_accounts_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/connectors/graph/accounts/{account_id}/sync:
+    post:
+      summary: Graph Sync
+      operationId: graph_sync_v1_connectors_graph_accounts__account_id__sync_post
+      parameters:
+      - name: account_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Account Id
+      - name: folder_id
+        in: query
+        required: false
+        schema:
+          type: string
+          default: inbox
+          title: Folder Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/connectors/graph/accounts/{account_id}/watch:
+    post:
+      summary: Graph Watch
+      operationId: graph_watch_v1_connectors_graph_accounts__account_id__watch_post
+      parameters:
+      - name: account_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Account Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/connectors/graph/webhook:
+    get:
+      summary: Graph Webhook Validation
+      operationId: graph_webhook_validation
+      parameters:
+      - name: validationToken
+        in: query
+        required: true
+        schema:
+          type: string
+          title: Validationtoken
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      summary: Graph Webhook Receive
+      operationId: graph_webhook_receive
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/pilot-programs/schema:
+    get:
+      tags:
+      - production-pilot
+      summary: Pilot Schema
+      operationId: pilot_schema_v1_pilot_programs_schema_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/pilot-programs:
+    get:
+      tags:
+      - production-pilot
+      summary: List Programs
+      operationId: list_programs_v1_pilot_programs_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    post:
+      tags:
+      - production-pilot
+      summary: Create Program Route
+      operationId: create_program_route_v1_pilot_programs_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PilotProgramIn'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/pilot-programs/{program_id}/transition:
+    post:
+      tags:
+      - production-pilot
+      summary: Transition Program Route
+      operationId: transition_program_route_v1_pilot_programs__program_id__transition_post
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/workbuddy__api__pilot_routes__TransitionIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/pilot-programs/{program_id}:
+    get:
+      tags:
+      - production-pilot
+      summary: Get Program
+      operationId: get_program_v1_pilot_programs__program_id__get
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/pilot-programs/{program_id}/mailboxes:
+    post:
+      tags:
+      - production-pilot
+      summary: Register Mailbox Route
+      operationId: register_mailbox_route_v1_pilot_programs__program_id__mailboxes_post
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PilotMailboxIn'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/pilot-programs/{program_id}/evidence:
+    get:
+      tags:
+      - production-pilot
+      summary: List Evidence
+      operationId: list_evidence_v1_pilot_programs__program_id__evidence_get
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      - name: gate
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Gate
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    post:
+      tags:
+      - production-pilot
+      summary: Submit Evidence Route
+      operationId: submit_evidence_route_v1_pilot_programs__program_id__evidence_post
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EvidenceIn'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/pilot-programs/{program_id}/evidence/upload:
+    post:
+      tags:
+      - production-pilot
+      summary: Upload Evidence Artifact
+      operationId: upload_evidence_artifact_v1_pilot_programs__program_id__evidence_upload_post
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Body_upload_evidence_artifact_v1_pilot_programs__program_id__evidence_upload_post'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/pilot-programs/evidence/{evidence_id}/decision:
+    post:
+      tags:
+      - production-pilot
+      summary: Verify Evidence Route
+      operationId: verify_evidence_route_v1_pilot_programs_evidence__evidence_id__decision_post
+      parameters:
+      - name: evidence_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Evidence Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/workbuddy__api__pilot_routes__EvidenceDecisionIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/pilot-programs/{program_id}/metrics:
+    post:
+      tags:
+      - production-pilot
+      summary: Record Metric Route
+      operationId: record_metric_route_v1_pilot_programs__program_id__metrics_post
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MetricIn'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - production-pilot
+      summary: List Metrics
+      operationId: list_metrics_v1_pilot_programs__program_id__metrics_get
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/pilot-programs/{program_id}/drills:
+    post:
+      tags:
+      - production-pilot
+      summary: Create Drill Route
+      operationId: create_drill_route_v1_pilot_programs__program_id__drills_post
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DrillIn'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - production-pilot
+      summary: List Drills
+      operationId: list_drills_v1_pilot_programs__program_id__drills_get
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/pilot-programs/drills/{drill_id}/complete:
+    post:
+      tags:
+      - production-pilot
+      summary: Complete Drill Route
+      operationId: complete_drill_route_v1_pilot_programs_drills__drill_id__complete_post
+      parameters:
+      - name: drill_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Drill Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DrillCompleteIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/pilot-programs/{program_id}/attestations:
+    post:
+      tags:
+      - production-pilot
+      summary: Attest Route
+      operationId: attest_route_v1_pilot_programs__program_id__attestations_post
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttestationIn'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - production-pilot
+      summary: List Attestations
+      operationId: list_attestations_v1_pilot_programs__program_id__attestations_get
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/pilot-programs/{program_id}/gates/{gate_key}:
+    get:
+      tags:
+      - production-pilot
+      summary: Gate Status
+      operationId: gate_status_v1_pilot_programs__program_id__gates__gate_key__get
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      - name: gate_key
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Gate Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/pilot-programs/{program_id}/go-no-go:
+    get:
+      tags:
+      - production-pilot
+      summary: Report
+      operationId: report_v1_pilot_programs__program_id__go_no_go_get
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/pilot-programs/{program_id}/incidents:
+    post:
+      tags:
+      - production-pilot
+      summary: Incident Route
+      operationId: incident_route_v1_pilot_programs__program_id__incidents_post
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncidentIn'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/pilot-programs/incidents/{incident_id}/resolve:
+    post:
+      tags:
+      - production-pilot
+      summary: Resolve Incident Route
+      operationId: resolve_incident_route_v1_pilot_programs_incidents__incident_id__resolve_post
+      parameters:
+      - name: incident_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Incident Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IncidentResolveIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/ops/preflight:
+    get:
+      tags:
+      - operations
+      summary: Preflight
+      operationId: preflight_v1_ops_preflight_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/ops/status:
+    get:
+      tags:
+      - operations
+      summary: Ops Status
+      operationId: ops_status_v1_ops_status_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /metrics/prometheus:
+    get:
+      tags:
+      - operations
+      summary: Prometheus Metrics
+      operationId: prometheus_metrics_metrics_prometheus_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/organization:
+    get:
+      tags:
+      - commercial-ga
+      summary: Organization Get
+      operationId: organization_get_v1_organization_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/organization/users:
+    post:
+      tags:
+      - commercial-ga
+      summary: Organization Invite
+      operationId: organization_invite_v1_organization_users_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserInviteIn'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/organization/users/{user_id}/role:
+    patch:
+      tags:
+      - commercial-ga
+      summary: Organization User Role
+      operationId: organization_user_role_v1_organization_users__user_id__role_patch
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: User Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRoleIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/commercial/plans:
+    get:
+      tags:
+      - commercial-ga
+      summary: Plans
+      operationId: plans_v1_commercial_plans_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/commercial/subscription:
+    get:
+      tags:
+      - commercial-ga
+      summary: Subscription
+      operationId: subscription_v1_commercial_subscription_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/commercial/subscriptions:
+    post:
+      tags:
+      - commercial-ga
+      summary: Subscription Create
+      operationId: subscription_create_v1_commercial_subscriptions_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionIn'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/commercial/subscriptions/{subscription_id}/transition:
+    post:
+      tags:
+      - commercial-ga
+      summary: Subscription Transition
+      operationId: subscription_transition_v1_commercial_subscriptions__subscription_id__transition_post
+      parameters:
+      - name: subscription_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Subscription Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/workbuddy__api__commercial_routes__TransitionIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/commercial/usage:
+    get:
+      tags:
+      - commercial-ga
+      summary: Usage Get
+      operationId: usage_get_v1_commercial_usage_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    post:
+      tags:
+      - commercial-ga
+      summary: Usage Record
+      operationId: usage_record_v1_commercial_usage_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UsageIn'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/commercial/usage/records:
+    get:
+      tags:
+      - commercial-ga
+      summary: Usage Records
+      operationId: usage_records_v1_commercial_usage_records_get
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 500
+          minimum: 1
+          default: 100
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/commercial/invoices:
+    get:
+      tags:
+      - commercial-ga
+      summary: Invoice List
+      operationId: invoice_list_v1_commercial_invoices_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    post:
+      tags:
+      - commercial-ga
+      summary: Invoice Create
+      operationId: invoice_create_v1_commercial_invoices_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvoiceIn'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/commercial/invoices/{invoice_id}/transition:
+    post:
+      tags:
+      - commercial-ga
+      summary: Invoice Transition
+      operationId: invoice_transition_v1_commercial_invoices__invoice_id__transition_post
+      parameters:
+      - name: invoice_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Invoice Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/workbuddy__api__commercial_routes__TransitionIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/commercial/billing-events:
+    get:
+      tags:
+      - commercial-ga
+      summary: Billing Events
+      operationId: billing_events_v1_commercial_billing_events_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/commercial/onboardings:
+    get:
+      tags:
+      - commercial-ga
+      summary: Onboarding List
+      operationId: onboarding_list_v1_commercial_onboardings_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    post:
+      tags:
+      - commercial-ga
+      summary: Onboarding Create
+      operationId: onboarding_create_v1_commercial_onboardings_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OnboardingIn'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/commercial/onboardings/{onboarding_id}/checklist:
+    patch:
+      tags:
+      - commercial-ga
+      summary: Onboarding Checklist
+      operationId: onboarding_checklist_v1_commercial_onboardings__onboarding_id__checklist_patch
+      parameters:
+      - name: onboarding_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Onboarding Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChecklistIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/commercial/onboardings/{onboarding_id}/transition:
+    post:
+      tags:
+      - commercial-ga
+      summary: Onboarding Transition
+      operationId: onboarding_transition_v1_commercial_onboardings__onboarding_id__transition_post
+      parameters:
+      - name: onboarding_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Onboarding Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/workbuddy__api__commercial_routes__TransitionIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/commercial/onboarding-schema:
+    get:
+      tags:
+      - commercial-ga
+      summary: Onboarding Schema
+      operationId: onboarding_schema_v1_commercial_onboarding_schema_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/support/tickets:
+    get:
+      tags:
+      - commercial-ga
+      summary: Support List
+      operationId: support_list_v1_support_tickets_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    post:
+      tags:
+      - commercial-ga
+      summary: Support Create
+      operationId: support_create_v1_support_tickets_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupportIn'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/support/tickets/{ticket_id}/transition:
+    post:
+      tags:
+      - commercial-ga
+      summary: Support Update
+      operationId: support_update_v1_support_tickets__ticket_id__transition_post
+      parameters:
+      - name: ticket_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Ticket Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SupportUpdateIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/status/incidents:
+    get:
+      tags:
+      - commercial-ga
+      summary: Status Incident List
+      operationId: status_incident_list_v1_status_incidents_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    post:
+      tags:
+      - commercial-ga
+      summary: Status Incident Create
+      operationId: status_incident_create_v1_status_incidents_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusIncidentIn'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/status/incidents/{incident_id}/transition:
+    post:
+      tags:
+      - commercial-ga
+      summary: Status Incident Update
+      operationId: status_incident_update_v1_status_incidents__incident_id__transition_post
+      parameters:
+      - name: incident_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Incident Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusIncidentUpdateIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/compliance/documents:
+    get:
+      tags:
+      - commercial-ga
+      summary: Compliance List
+      operationId: compliance_list_v1_compliance_documents_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    post:
+      tags:
+      - commercial-ga
+      summary: Compliance Publish
+      operationId: compliance_publish_v1_compliance_documents_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ComplianceIn'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/compliance/documents/{document_id}/accept:
+    post:
+      tags:
+      - commercial-ga
+      summary: Compliance Accept
+      operationId: compliance_accept_v1_compliance_documents__document_id__accept_post
+      parameters:
+      - name: document_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Document Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgreementIn'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/compliance/agreements:
+    get:
+      tags:
+      - commercial-ga
+      summary: Agreement List
+      operationId: agreement_list_v1_compliance_agreements_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/commercial/value-metrics:
+    get:
+      tags:
+      - commercial-ga
+      summary: Value Metric List
+      operationId: value_metric_list_v1_commercial_value_metrics_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    post:
+      tags:
+      - commercial-ga
+      summary: Value Metric Create
+      operationId: value_metric_create_v1_commercial_value_metrics_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValueMetricIn'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/ga/schema:
+    get:
+      tags:
+      - commercial-ga
+      summary: Ga Schema
+      operationId: ga_schema_v1_ga_schema_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/ga/programs:
+    get:
+      tags:
+      - commercial-ga
+      summary: Ga Program List
+      operationId: ga_program_list_v1_ga_programs_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    post:
+      tags:
+      - commercial-ga
+      summary: Ga Program Create
+      operationId: ga_program_create_v1_ga_programs_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GAProgramIn'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/ga/programs/{program_id}/evidence:
+    post:
+      tags:
+      - commercial-ga
+      summary: Ga Evidence Submit
+      operationId: ga_evidence_submit_v1_ga_programs__program_id__evidence_post
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GAEvidenceIn'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - commercial-ga
+      summary: Ga Evidence List
+      operationId: ga_evidence_list_v1_ga_programs__program_id__evidence_get
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      - name: gate
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Gate
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/ga/evidence/{evidence_id}/decision:
+    post:
+      tags:
+      - commercial-ga
+      summary: Ga Evidence Decide
+      operationId: ga_evidence_decide_v1_ga_evidence__evidence_id__decision_post
+      parameters:
+      - name: evidence_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Evidence Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/workbuddy__api__commercial_routes__EvidenceDecisionIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/ga/programs/{program_id}/attestations:
+    post:
+      tags:
+      - commercial-ga
+      summary: Ga Attest
+      operationId: ga_attest_v1_ga_programs__program_id__attestations_post
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GAAttestationIn'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - commercial-ga
+      summary: Ga Attestations
+      operationId: ga_attestations_v1_ga_programs__program_id__attestations_get
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/ga/programs/{program_id}/gates/{gate_key}:
+    get:
+      tags:
+      - commercial-ga
+      summary: Ga Gate
+      operationId: ga_gate_v1_ga_programs__program_id__gates__gate_key__get
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      - name: gate_key
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Gate Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/ga/programs/{program_id}/go-no-go:
+    get:
+      tags:
+      - commercial-ga
+      summary: Ga Report
+      operationId: ga_report_v1_ga_programs__program_id__go_no_go_get
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/commercial/pricing-approvals:
+    get:
+      tags:
+      - commercial-ga
+      summary: Pricing Approval List
+      operationId: pricing_approval_list_v1_commercial_pricing_approvals_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    post:
+      tags:
+      - commercial-ga
+      summary: Pricing Approval Create
+      operationId: pricing_approval_create_v1_commercial_pricing_approvals_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PricingApprovalIn'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/commercial/pricing-approvals/status:
+    get:
+      tags:
+      - commercial-ga
+      summary: Pricing Approval Status
+      operationId: pricing_approval_status_v1_commercial_pricing_approvals_status_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/commercial/billing/webhook:
+    post:
+      tags:
+      - commercial-ga
+      summary: Billing Webhook
+      operationId: billing_webhook_v1_commercial_billing_webhook_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              additionalProperties: true
+              type: object
+              title: Body
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/commercial/model-agreements:
+    get:
+      tags:
+      - commercial-ga
+      summary: Model Agreement List
+      operationId: model_agreement_list_v1_commercial_model_agreements_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    post:
+      tags:
+      - commercial-ga
+      summary: Model Agreement Create
+      operationId: model_agreement_create_v1_commercial_model_agreements_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelAgreementIn'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/commercial/pentest-reports:
+    get:
+      tags:
+      - commercial-ga
+      summary: Pentest Report List
+      operationId: pentest_report_list_v1_commercial_pentest_reports_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    post:
+      tags:
+      - commercial-ga
+      summary: Pentest Report Create
+      operationId: pentest_report_create_v1_commercial_pentest_reports_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PentestReportIn'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/compliance/documents/{document_id}/legal-review:
+    post:
+      tags:
+      - commercial-ga
+      summary: Legal Review Create
+      operationId: legal_review_create_v1_compliance_documents__document_id__legal_review_post
+      parameters:
+      - name: document_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Document Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LegalReviewIn'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/compliance/legal-reviews:
+    get:
+      tags:
+      - commercial-ga
+      summary: Legal Review List
+      operationId: legal_review_list_v1_compliance_legal_reviews_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/oncall/schedules:
+    get:
+      tags:
+      - commercial-ga
+      summary: Oncall Schedule List
+      operationId: oncall_schedule_list_v1_oncall_schedules_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    post:
+      tags:
+      - commercial-ga
+      summary: Oncall Schedule Create
+      operationId: oncall_schedule_create_v1_oncall_schedules_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OncallScheduleIn'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/oncall/schedules/{schedule_id}/shifts:
+    post:
+      tags:
+      - commercial-ga
+      summary: Oncall Shift Create
+      operationId: oncall_shift_create_v1_oncall_schedules__schedule_id__shifts_post
+      parameters:
+      - name: schedule_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Schedule Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OncallShiftIn'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+    get:
+      tags:
+      - commercial-ga
+      summary: Oncall Shift List
+      operationId: oncall_shift_list_v1_oncall_schedules__schedule_id__shifts_get
+      parameters:
+      - name: schedule_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Schedule Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/oncall/current:
+    get:
+      tags:
+      - commercial-ga
+      summary: Oncall Current
+      operationId: oncall_current_v1_oncall_current_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/oncall/escalation-policies:
+    get:
+      tags:
+      - commercial-ga
+      summary: Oncall Escalation Policy List
+      operationId: oncall_escalation_policy_list_v1_oncall_escalation_policies_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+    post:
+      tags:
+      - commercial-ga
+      summary: Oncall Escalation Policy Create
+      operationId: oncall_escalation_policy_create_v1_oncall_escalation_policies_post
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EscalationPolicyIn'
+        required: true
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/oncall/coverage:
+    get:
+      tags:
+      - commercial-ga
+      summary: Oncall Coverage
+      operationId: oncall_coverage_v1_oncall_coverage_get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+  /v1/commercial/onboardings/{onboarding_id}/design-partner-profile:
+    patch:
+      tags:
+      - commercial-ga
+      summary: Design Partner Profile Update
+      operationId: design_partner_profile_update_v1_commercial_onboardings__onboarding_id__design_partner_profile_patch
+      parameters:
+      - name: onboarding_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Onboarding Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DesignPartnerProfileIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/ga/programs/{program_id}/observation-window/start:
+    post:
+      tags:
+      - commercial-ga
+      summary: Observation Window Start
+      operationId: observation_window_start_v1_ga_programs__program_id__observation_window_start_post
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObservationWindowIn'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/ga/programs/{program_id}/observation-window/check:
+    post:
+      tags:
+      - commercial-ga
+      summary: Observation Window Check
+      operationId: observation_window_check_v1_ga_programs__program_id__observation_window_check_post
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/ga/programs/{program_id}/observation-window:
+    get:
+      tags:
+      - commercial-ga
+      summary: Observation Window Get
+      operationId: observation_window_get_v1_ga_programs__program_id__observation_window_get
+      parameters:
+      - name: program_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Program Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+components:
+  schemas:
+    AgentExecuteIn:
+      properties:
+        force_provider:
+          type: string
+          const: configured
+          title: Force Provider
+          default: configured
+      additionalProperties: false
+      type: object
+      title: AgentExecuteIn
+    AgentOutputIn:
+      properties:
+        output:
+          additionalProperties: true
+          type: object
+          title: Output
+        evidence:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Evidence
+          default: []
+      additionalProperties: false
+      type: object
+      required:
+      - output
+      title: AgentOutputIn
+    AgreementIn:
+      properties:
+        evidence:
+          additionalProperties: true
+          type: object
+          title: Evidence
+      additionalProperties: false
+      type: object
+      title: AgreementIn
+    ApprovalDecisionIn:
+      properties:
+        decision:
+          type: string
+          enum:
+          - approve
+          - reject
+          - changes_requested
+          title: Decision
+        reason:
+          type: string
+          minLength: 1
+          title: Reason
+      additionalProperties: false
+      type: object
+      required:
+      - decision
+      - reason
+      title: ApprovalDecisionIn
+    AttestationIn:
+      properties:
+        gate_key:
+          type: string
+          title: Gate Key
+        role:
+          type: string
+          title: Role
+        decision:
+          type: string
+          title: Decision
+        notes:
+          type: string
+          title: Notes
+          default: ''
+      type: object
+      required:
+      - gate_key
+      - role
+      - decision
+      title: AttestationIn
+    Body_upload_evidence_artifact_v1_pilot_programs__program_id__evidence_upload_post:
+      properties:
+        gate_key:
+          type: string
+          title: Gate Key
+        evidence_type:
+          type: string
+          title: Evidence Type
+        source:
+          type: string
+          title: Source
+          default: operator
+        environment:
+          type: string
+          title: Environment
+          default: production
+        file:
+          type: string
+          contentMediaType: application/octet-stream
+          title: File
+      type: object
+      required:
+      - gate_key
+      - evidence_type
+      - file
+      title: Body_upload_evidence_artifact_v1_pilot_programs__program_id__evidence_upload_post
+    Body_upload_skill_v1_skills_upload_post:
+      properties:
+        file:
+          type: string
+          contentMediaType: application/octet-stream
+          title: File
+      type: object
+      required:
+      - file
+      title: Body_upload_skill_v1_skills_upload_post
+    ChecklistIn:
+      properties:
+        updates:
+          additionalProperties: true
+          type: object
+          title: Updates
+      additionalProperties: false
+      type: object
+      required:
+      - updates
+      title: ChecklistIn
+    CollaborationIn:
+      properties:
+        receiving_team_key:
+          type: string
+          title: Receiving Team Key
+        objective:
+          type: string
+          minLength: 1
+          title: Objective
+        expected_artifact:
+          type: string
+          minLength: 1
+          title: Expected Artifact
+        input_scope:
+          additionalProperties: true
+          type: object
+          title: Input Scope
+          default: {}
+      additionalProperties: false
+      type: object
+      required:
+      - receiving_team_key
+      - objective
+      - expected_artifact
+      title: CollaborationIn
+    CollaborationResponseIn:
+      properties:
+        status:
+          type: string
+          enum:
+          - ACCEPTED
+          - IN_PROGRESS
+          - COMPLETED
+          - REJECTED
+          title: Status
+        response:
+          additionalProperties: true
+          type: object
+          title: Response
+          default: {}
+      additionalProperties: false
+      type: object
+      required:
+      - status
+      title: CollaborationResponseIn
+    ComplianceIn:
+      properties:
+        document_key:
+          type: string
+          title: Document Key
+        title:
+          type: string
+          title: Title
+        version:
+          type: string
+          title: Version
+        artifact_ref:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Artifact Ref
+        content_hash:
+          type: string
+          maxLength: 64
+          minLength: 64
+          title: Content Hash
+      additionalProperties: false
+      type: object
+      required:
+      - document_key
+      - title
+      - version
+      - content_hash
+      title: ComplianceIn
+    ControlIn:
+      properties:
+        scope_type:
+          type: string
+          enum:
+          - company
+          - team
+          - mission
+          title: Scope Type
+        scope_id:
+          type: string
+          title: Scope Id
+        paused:
+          type: boolean
+          title: Paused
+        reason:
+          type: string
+          minLength: 1
+          title: Reason
+      additionalProperties: false
+      type: object
+      required:
+      - scope_type
+      - scope_id
+      - paused
+      - reason
+      title: ControlIn
+    DeleteOperationalDataIn:
+      properties:
+        confirmation:
+          type: string
+          const: DELETE OPERATIONAL DATA
+          title: Confirmation
+      additionalProperties: false
+      type: object
+      required:
+      - confirmation
+      title: DeleteOperationalDataIn
+    DependencyIn:
+      properties:
+        work_item_id:
+          type: string
+          title: Work Item Id
+        depends_on_id:
+          type: string
+          title: Depends On Id
+      additionalProperties: false
+      type: object
+      required:
+      - work_item_id
+      - depends_on_id
+      title: DependencyIn
+    DesignPartnerProfileIn:
+      properties:
+        profile:
+          additionalProperties: true
+          type: object
+          title: Profile
+      additionalProperties: false
+      type: object
+      required:
+      - profile
+      title: DesignPartnerProfileIn
+    DispatchConfirmIn:
+      properties:
+        team_key:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Team Key
+        workflow_key:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Workflow Key
+      additionalProperties: false
+      type: object
+      title: DispatchConfirmIn
+    DispatchFeedbackIn:
+      properties:
+        confirmed_team_key:
+          type: string
+          title: Confirmed Team Key
+        corrected_risk_level:
+          anyOf:
+          - type: string
+            enum:
+            - low
+            - medium
+            - high
+            - critical
+          - type: 'null'
+          title: Corrected Risk Level
+        comment:
+          type: string
+          maxLength: 2000
+          title: Comment
+          default: ''
+      additionalProperties: false
+      type: object
+      required:
+      - confirmed_team_key
+      title: DispatchFeedbackIn
+    DrillCompleteIn:
+      properties:
+        passed:
+          type: boolean
+          title: Passed
+        result:
+          additionalProperties: true
+          type: object
+          title: Result
+        evidence_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Evidence Id
+      type: object
+      required:
+      - passed
+      title: DrillCompleteIn
+    DrillIn:
+      properties:
+        drill_type:
+          type: string
+          title: Drill Type
+        execution_mode:
+          type: string
+          title: Execution Mode
+          default: SIMULATED
+      type: object
+      required:
+      - drill_type
+      title: DrillIn
+    EscalationPolicyIn:
+      properties:
+        severity:
+          type: string
+          title: Severity
+        steps:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Steps
+      additionalProperties: false
+      type: object
+      required:
+      - severity
+      - steps
+      title: EscalationPolicyIn
+    EvidenceIn:
+      properties:
+        gate_key:
+          type: string
+          title: Gate Key
+        evidence_type:
+          type: string
+          title: Evidence Type
+        source:
+          type: string
+          title: Source
+        environment:
+          type: string
+          title: Environment
+          default: staging
+        metrics:
+          additionalProperties: true
+          type: object
+          title: Metrics
+        artifact_ref:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Artifact Ref
+      type: object
+      required:
+      - gate_key
+      - evidence_type
+      - source
+      title: EvidenceIn
+    GAAttestationIn:
+      properties:
+        gate_key:
+          type: string
+          title: Gate Key
+        role:
+          type: string
+          title: Role
+        decision:
+          type: string
+          title: Decision
+        notes:
+          type: string
+          title: Notes
+          default: ''
+      additionalProperties: false
+      type: object
+      required:
+      - gate_key
+      - role
+      - decision
+      title: GAAttestationIn
+    GAEvidenceIn:
+      properties:
+        gate_key:
+          type: string
+          title: Gate Key
+        evidence_type:
+          type: string
+          title: Evidence Type
+        source:
+          type: string
+          title: Source
+          default: operator
+        metrics:
+          additionalProperties: true
+          type: object
+          title: Metrics
+        artifact_ref:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Artifact Ref
+      additionalProperties: false
+      type: object
+      required:
+      - gate_key
+      - evidence_type
+      title: GAEvidenceIn
+    GAProgramIn:
+      properties:
+        name:
+          type: string
+          title: Name
+        pilot_program_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Pilot Program Id
+        targets:
+          additionalProperties: true
+          type: object
+          title: Targets
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      title: GAProgramIn
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          type: array
+          title: Detail
+      type: object
+      title: HTTPValidationError
+    IncidentIn:
+      properties:
+        severity:
+          type: string
+          title: Severity
+        category:
+          type: string
+          title: Category
+        title:
+          type: string
+          title: Title
+        details:
+          additionalProperties: true
+          type: object
+          title: Details
+      type: object
+      required:
+      - severity
+      - category
+      - title
+      title: IncidentIn
+    IncidentResolveIn:
+      properties:
+        resolution:
+          type: string
+          minLength: 3
+          title: Resolution
+      type: object
+      required:
+      - resolution
+      title: IncidentResolveIn
+    InvoiceIn:
+      properties:
+        subscription_id:
+          type: string
+          title: Subscription Id
+        tax_rate_basis_points:
+          type: integer
+          maximum: 10000.0
+          minimum: 0.0
+          title: Tax Rate Basis Points
+          default: 0
+      additionalProperties: false
+      type: object
+      required:
+      - subscription_id
+      title: InvoiceIn
+    LegalReviewIn:
+      properties:
+        reviewer_role:
+          type: string
+          title: Reviewer Role
+        decision:
+          type: string
+          title: Decision
+        jurisdiction:
+          type: string
+          title: Jurisdiction
+          default: CN
+        notes:
+          type: string
+          title: Notes
+          default: ''
+      additionalProperties: false
+      type: object
+      required:
+      - reviewer_role
+      - decision
+      title: LegalReviewIn
+    MailIn:
+      properties:
+        provider_message_id:
+          type: string
+          maxLength: 300
+          minLength: 1
+          title: Provider Message Id
+        provider_thread_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider Thread Id
+        rfc_message_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Rfc Message Id
+        sender:
+          type: string
+          maxLength: 500
+          minLength: 1
+          title: Sender
+        recipients:
+          items:
+            type: string
+          type: array
+          title: Recipients
+          default: []
+        subject:
+          type: string
+          maxLength: 500
+          minLength: 1
+          title: Subject
+        body_text:
+          type: string
+          minLength: 1
+          title: Body Text
+        body_html:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Body Html
+        received_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Received At
+      additionalProperties: false
+      type: object
+      required:
+      - provider_message_id
+      - sender
+      - subject
+      - body_text
+      title: MailIn
+    MemoryDecisionIn:
+      properties:
+        decision:
+          type: string
+          enum:
+          - approve
+          - reject
+          title: Decision
+      additionalProperties: false
+      type: object
+      required:
+      - decision
+      title: MemoryDecisionIn
+    MemoryProposalIn:
+      properties:
+        mission_id:
+          type: string
+          title: Mission Id
+        memory_type:
+          type: string
+          title: Memory Type
+        subject_key:
+          type: string
+          title: Subject Key
+        content:
+          additionalProperties: true
+          type: object
+          title: Content
+        source_artifact_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Source Artifact Id
+      additionalProperties: false
+      type: object
+      required:
+      - mission_id
+      - memory_type
+      - subject_key
+      - content
+      title: MemoryProposalIn
+    MetricIn:
+      properties:
+        metric_date:
+          type: string
+          title: Metric Date
+        mailbox_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Mailbox Id
+        metrics:
+          additionalProperties: true
+          type: object
+          title: Metrics
+        source:
+          type: string
+          title: Source
+          default: operator
+      type: object
+      required:
+      - metric_date
+      - metrics
+      title: MetricIn
+    ModelAgreementIn:
+      properties:
+        provider:
+          type: string
+          title: Provider
+        model_name:
+          type: string
+          title: Model Name
+        dpa_status:
+          type: string
+          title: Dpa Status
+          default: PENDING
+        dpa_ref:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Dpa Ref
+        processing_region:
+          type: string
+          title: Processing Region
+          default: CN
+        input_cost_cny_fen_per_million:
+          type: integer
+          minimum: 0.0
+          title: Input Cost Cny Fen Per Million
+          default: 0
+        output_cost_cny_fen_per_million:
+          type: integer
+          minimum: 0.0
+          title: Output Cost Cny Fen Per Million
+          default: 0
+      additionalProperties: false
+      type: object
+      required:
+      - provider
+      - model_name
+      title: ModelAgreementIn
+    ObservationWindowIn:
+      properties:
+        days:
+          type: integer
+          maximum: 90.0
+          minimum: 1.0
+          title: Days
+          default: 30
+      additionalProperties: false
+      type: object
+      title: ObservationWindowIn
+    OnboardingIn:
+      properties:
+        name:
+          type: string
+          title: Name
+        pilot_program_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Pilot Program Id
+        target_go_live_at:
+          anyOf:
+          - type: string
+            format: date-time
+          - type: 'null'
+          title: Target Go Live At
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      title: OnboardingIn
+    OncallScheduleIn:
+      properties:
+        name:
+          type: string
+          title: Name
+        timezone:
+          type: string
+          title: Timezone
+          default: Asia/Shanghai
+      additionalProperties: false
+      type: object
+      required:
+      - name
+      title: OncallScheduleIn
+    OncallShiftIn:
+      properties:
+        responder_id:
+          type: string
+          title: Responder Id
+        responder_contact:
+          type: string
+          title: Responder Contact
+        role:
+          type: string
+          title: Role
+          default: primary
+        shift_start:
+          type: string
+          format: date-time
+          title: Shift Start
+        shift_end:
+          type: string
+          format: date-time
+          title: Shift End
+      additionalProperties: false
+      type: object
+      required:
+      - responder_id
+      - responder_contact
+      - shift_start
+      - shift_end
+      title: OncallShiftIn
+    OperationExecuteIn:
+      properties:
+        simulate_unknown:
+          type: boolean
+          title: Simulate Unknown
+          default: false
+      additionalProperties: false
+      type: object
+      title: OperationExecuteIn
+    OperationPrepareIn:
+      properties:
+        approval_id:
+          type: string
+          title: Approval Id
+        operation_key:
+          type: string
+          maxLength: 200
+          minLength: 4
+          title: Operation Key
+      additionalProperties: false
+      type: object
+      required:
+      - approval_id
+      - operation_key
+      title: OperationPrepareIn
+    OperationVerifyIn:
+      properties:
+        outcome:
+          type: string
+          enum:
+          - succeeded
+          - failed
+          title: Outcome
+      additionalProperties: false
+      type: object
+      required:
+      - outcome
+      title: OperationVerifyIn
+    PentestReportIn:
+      properties:
+        test_date:
+          type: string
+          title: Test Date
+        tester_type:
+          type: string
+          title: Tester Type
+          default: INTERNAL_AUTOMATED
+        scope:
+          type: string
+          title: Scope
+        findings:
+          items:
+            additionalProperties: true
+            type: object
+          type: array
+          title: Findings
+        remediation_status:
+          type: string
+          title: Remediation Status
+          default: PENDING
+        report_ref:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Report Ref
+        report_hash:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Report Hash
+      additionalProperties: false
+      type: object
+      required:
+      - test_date
+      - scope
+      title: PentestReportIn
+    PilotMailboxIn:
+      properties:
+        mail_account_id:
+          type: string
+          title: Mail Account Id
+        mode:
+          type: string
+          title: Mode
+          default: SHADOW
+        team_keys:
+          items:
+            type: string
+          type: array
+          title: Team Keys
+        allowed_recipient_domains:
+          items:
+            type: string
+          type: array
+          title: Allowed Recipient Domains
+        allowed_recipient_addresses:
+          items:
+            type: string
+          type: array
+          title: Allowed Recipient Addresses
+        daily_send_limit:
+          type: integer
+          maximum: 1000.0
+          minimum: 0.0
+          title: Daily Send Limit
+          default: 0
+      type: object
+      required:
+      - mail_account_id
+      title: PilotMailboxIn
+    PilotProgramIn:
+      properties:
+        name:
+          type: string
+          maxLength: 240
+          minLength: 3
+          title: Name
+        start_date:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Start Date
+        end_date:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: End Date
+        scope:
+          additionalProperties: true
+          type: object
+          title: Scope
+        targets:
+          additionalProperties: true
+          type: object
+          title: Targets
+        owners:
+          additionalProperties:
+            anyOf:
+            - type: string
+            - type: 'null'
+          type: object
+          title: Owners
+      type: object
+      required:
+      - name
+      title: PilotProgramIn
+    PlanIn:
+      properties:
+        expected_version:
+          type: integer
+          minimum: 1.0
+          title: Expected Version
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 1
+          title: Reason
+          default: 执行流程动作
+        workflow_key:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Workflow Key
+      additionalProperties: false
+      type: object
+      required:
+      - expected_version
+      title: PlanIn
+    PricingApprovalIn:
+      properties:
+        approver_role:
+          type: string
+          title: Approver Role
+        decision:
+          type: string
+          title: Decision
+        contract_ref:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Contract Ref
+        notes:
+          type: string
+          title: Notes
+          default: ''
+      additionalProperties: false
+      type: object
+      required:
+      - approver_role
+      - decision
+      title: PricingApprovalIn
+    SkillTestIn:
+      properties:
+        test_input:
+          additionalProperties: true
+          type: object
+          title: Test Input
+          default: {}
+      additionalProperties: false
+      type: object
+      title: SkillTestIn
+    StatusIncidentIn:
+      properties:
+        title:
+          type: string
+          title: Title
+        impact:
+          type: string
+          title: Impact
+        public_message:
+          type: string
+          title: Public Message
+        components:
+          items:
+            type: string
+          type: array
+          title: Components
+      additionalProperties: false
+      type: object
+      required:
+      - title
+      - impact
+      - public_message
+      title: StatusIncidentIn
+    StatusIncidentUpdateIn:
+      properties:
+        status:
+          type: string
+          title: Status
+        public_message:
+          type: string
+          title: Public Message
+      additionalProperties: false
+      type: object
+      required:
+      - status
+      - public_message
+      title: StatusIncidentUpdateIn
+    SubscriptionIn:
+      properties:
+        plan_key:
+          type: string
+          title: Plan Key
+        billing_cycle:
+          type: string
+          title: Billing Cycle
+          default: monthly
+        trial_days:
+          type: integer
+          maximum: 90.0
+          minimum: 0.0
+          title: Trial Days
+          default: 14
+        provider:
+          type: string
+          title: Provider
+          default: manual
+      additionalProperties: false
+      type: object
+      required:
+      - plan_key
+      title: SubscriptionIn
+    SupportIn:
+      properties:
+        severity:
+          type: string
+          title: Severity
+        category:
+          type: string
+          title: Category
+        title:
+          type: string
+          title: Title
+        description:
+          type: string
+          title: Description
+      additionalProperties: false
+      type: object
+      required:
+      - severity
+      - category
+      - title
+      - description
+      title: SupportIn
+    SupportUpdateIn:
+      properties:
+        status:
+          type: string
+          title: Status
+        assigned_to:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Assigned To
+        resolution:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Resolution
+      additionalProperties: false
+      type: object
+      required:
+      - status
+      title: SupportUpdateIn
+    TenantPolicyIn:
+      properties:
+        config:
+          additionalProperties: true
+          type: object
+          title: Config
+        expected_version:
+          anyOf:
+          - type: integer
+            minimum: 1.0
+          - type: 'null'
+          title: Expected Version
+      additionalProperties: false
+      type: object
+      required:
+      - config
+      title: TenantPolicyIn
+    ToolInvokeIn:
+      properties:
+        action:
+          type: string
+          title: Action
+        parameters:
+          additionalProperties: true
+          type: object
+          title: Parameters
+          default: {}
+      additionalProperties: false
+      type: object
+      required:
+      - action
+      title: ToolInvokeIn
+    UsageIn:
+      properties:
+        metric_key:
+          type: string
+          title: Metric Key
+        quantity:
+          type: integer
+          minimum: 0.0
+          title: Quantity
+        unit:
+          type: string
+          title: Unit
+        source_type:
+          type: string
+          title: Source Type
+        source_id:
+          type: string
+          title: Source Id
+        idempotency_key:
+          type: string
+          title: Idempotency Key
+        cost_cny_fen:
+          type: integer
+          minimum: 0.0
+          title: Cost Cny Fen
+          default: 0
+        dimensions:
+          additionalProperties: true
+          type: object
+          title: Dimensions
+      additionalProperties: false
+      type: object
+      required:
+      - metric_key
+      - quantity
+      - unit
+      - source_type
+      - source_id
+      - idempotency_key
+      title: UsageIn
+    UserInviteIn:
+      properties:
+        email:
+          type: string
+          title: Email
+        name:
+          type: string
+          title: Name
+        role:
+          type: string
+          title: Role
+          default: member
+      additionalProperties: false
+      type: object
+      required:
+      - email
+      - name
+      title: UserInviteIn
+    UserRoleIn:
+      properties:
+        role:
+          type: string
+          title: Role
+      additionalProperties: false
+      type: object
+      required:
+      - role
+      title: UserRoleIn
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          type: array
+          title: Location
+        msg:
+          type: string
+          title: Message
+        type:
+          type: string
+          title: Error Type
+        input:
+          title: Input
+        ctx:
+          type: object
+          title: Context
+      type: object
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+    ValueMetricIn:
+      properties:
+        metric_date:
+          type: string
+          title: Metric Date
+        metric_key:
+          type: string
+          title: Metric Key
+        value:
+          type: integer
+          title: Value
+        unit:
+          type: string
+          title: Unit
+        source:
+          type: string
+          title: Source
+        dimensions:
+          additionalProperties: true
+          type: object
+          title: Dimensions
+      additionalProperties: false
+      type: object
+      required:
+      - metric_date
+      - metric_key
+      - value
+      - unit
+      - source
+      title: ValueMetricIn
+    VersionAction:
+      properties:
+        expected_version:
+          type: integer
+          minimum: 1.0
+          title: Expected Version
+        reason:
+          type: string
+          maxLength: 1000
+          minLength: 1
+          title: Reason
+          default: 执行流程动作
+      additionalProperties: false
+      type: object
+      required:
+      - expected_version
+      title: VersionAction
+    WorkItemReviewIn:
+      properties:
+        decision:
+          type: string
+          enum:
+          - accept
+          - revise
+          title: Decision
+        reason:
+          type: string
+          minLength: 1
+          title: Reason
+      additionalProperties: false
+      type: object
+      required:
+      - decision
+      - reason
+      title: WorkItemReviewIn
+    WorkItemUpdateIn:
+      properties:
+        expected_version:
+          type: integer
+          minimum: 1.0
+          title: Expected Version
+        title:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Title
+        objective:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Objective
+        assigned_agent_profile_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Assigned Agent Profile Id
+        skill_release_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Skill Release Id
+        acceptance_criteria:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Acceptance Criteria
+        evidence_requirements:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Evidence Requirements
+      additionalProperties: false
+      type: object
+      required:
+      - expected_version
+      title: WorkItemUpdateIn
+    workbuddy__api__commercial_routes__EvidenceDecisionIn:
+      properties:
+        decision:
+          type: string
+          title: Decision
+        reason:
+          type: string
+          title: Reason
+          default: ''
+      additionalProperties: false
+      type: object
+      required:
+      - decision
+      title: EvidenceDecisionIn
+    workbuddy__api__commercial_routes__TransitionIn:
+      properties:
+        target:
+          type: string
+          title: Target
+        provider_ref:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Provider Ref
+        manual_evidence:
+          type: boolean
+          title: Manual Evidence
+          default: false
+      additionalProperties: false
+      type: object
+      required:
+      - target
+      title: TransitionIn
+    workbuddy__api__pilot_routes__EvidenceDecisionIn:
+      properties:
+        decision:
+          type: string
+          title: Decision
+        reason:
+          type: string
+          title: Reason
+          default: ''
+      type: object
+      required:
+      - decision
+      title: EvidenceDecisionIn
+    workbuddy__api__pilot_routes__TransitionIn:
+      properties:
+        target:
+          type: string
+          title: Target
+      type: object
+      required:
+      - target
+      title: TransitionIn

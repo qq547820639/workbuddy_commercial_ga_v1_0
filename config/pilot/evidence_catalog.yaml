@@ -1,0 +1,42 @@
+version: 1
+gates:
+  B:
+    title: 邮箱影子试点
+    evidence:
+      cursor_recovery_drill: Gmail history / Graph delta 游标恢复演练
+      mail_sync_stability: 连续稳定同步与零漏件、零重复统计
+      dispatch_accuracy: 主责专家团准确率评估
+      risk_recall: 高风险识别召回率评估
+    roles: [product_owner, it_admin]
+  C:
+    title: 真实模型与 Agent 执行
+    evidence:
+      model_data_agreement: 模型供应商数据协议与区域选择
+      agent_evaluation: 三个专家团离线和现场评估报告
+      red_team: 提示注入、越权和跨任务隔离红队报告
+      evidence_coverage: 关键事实 Evidence 覆盖率报告
+    roles: [product_owner, ai_platform_owner, security_owner, business_owner]
+  D:
+    title: 受控真实发送
+    evidence:
+      live_send_verification: Gmail/Graph Provider 核验记录
+      unknown_recovery_drill: UNKNOWN 不重试与核验演练
+      duplicate_send_zero: 重复发送为零的统计证据
+      unapproved_send_zero: 未审批发送为零的统计证据
+    roles: [operations_owner, security_owner, product_owner]
+  PRODUCTION:
+    title: 小规模生产开放
+    evidence:
+      penetration_test: 独立渗透测试报告
+      privacy_review: 隐私、法律与数据保留签字
+      backup_restore_drill: 数据库备份恢复演练
+      incident_response_drill: P0/P1 事故响应演练
+      support_readiness: 值班、支持与升级路径
+      cloud_setup_verified: 云基础设施通过 Terraform plan/apply 验证（GCP Cloud SQL、对象存储、KMS、Secrets、DNS/TLS、Entra 应用注册）
+      pentest_report_current: 外部第三方渗透测试报告且所有发现已修复闭环
+      legal_approval_complete: 所有法律文件（条款、隐私、DPA、子处理者、安全白皮书）经 legal_owner 与 privacy_owner 审批
+      observation_window_completed: 30 天生产观察窗口内无 P0/P1 事故
+      oncall_coverage_verified: 值班覆盖已验证 7 天以上，无覆盖空档
+      billing_dry_run_completed: 端到端计费演练完成（开票、税务、结算与 webhook）
+      pricing_approval_recorded: 正式定价审批已记录并附合同编号
+    roles: [product_owner, platform_owner, security_owner, privacy_owner, operations_owner, legal_owner]

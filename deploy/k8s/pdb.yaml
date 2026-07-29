@@ -1,0 +1,8 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: workbuddy-api
+  namespace: workbuddy
+spec:
+  minAvailable: 1
+  selector: {matchLabels: {app: workbuddy-api}}

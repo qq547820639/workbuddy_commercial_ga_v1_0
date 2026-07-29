@@ -1,0 +1,12 @@
+schema_version: 1
+skill_key: commercial-scenario-analysis
+semantic_version: 1.0.0
+name: 商务情景分析
+purpose: 比较价格、分成和成本情景，形成建议与替代方案。
+allowed_roles: [deal_strategist]
+inputs: [requirements, assumptions]
+outputs: [scenario_table, recommendation, alternatives]
+procedure: [建立基准情景, 计算备选情景, 区分事实与假设, 评估利润和风险]
+tools: [spreadsheet_engine]
+permissions: {data_scope: current_mission, external_write: false}
+quality_gates: [所有数字标注来源或假设, 至少提供一个替代方案]

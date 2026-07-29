@@ -1,0 +1,60 @@
+# Example variable values for the WorkBuddy production Terraform stack.
+# Copy to terraform.tfvars and replace every placeholder. Never commit real
+# secrets; secret *values* are seeded out of band and managed in Secret Manager.
+
+# --- GCP project / region -----------------------------------------------------
+project_id   = "REPLACE_WITH_GCP_PROJECT_ID"
+region       = "asia-east2"
+environment  = "production"
+
+# --- Cloud SQL ----------------------------------------------------------------
+db_instance_name      = "workbuddy-prod"
+db_name               = "workbuddy"
+db_user               = "workbuddy"
+db_tier               = "db-custom-4-15360"
+db_availability_type  = "REGIONAL"
+db_pg_version         = "POSTGRES_16"
+db_disk_size_gb       = 100
+
+# --- Networking ---------------------------------------------------------------
+vpc_name                     = "workbuddy-prod-vpc"
+subnet_cidr                  = "10.20.0.0/20"
+sql_private_services_range   = "10.30.0.0/24"
+vpc_connector_cidr           = "10.40.0.0/28"
+vpc_connector_machine_type   = "e2-micro"
+
+# --- Object storage / encryption ---------------------------------------------
+object_store_bucket    = "workbuddy-prod-objects"
+backup_bucket          = "workbuddy-prod-backups"
+kms_key_ring_name      = "workbuddy-prod"
+kms_crypto_key_name    = "object-store-cmek"
+storage_retention_days = 90
+
+# --- DNS / TLS ----------------------------------------------------------------
+dns_zone_name         = "workbuddy-prod"
+dns_domain            = "workbuddy.example.com"
+dns_a_record_name     = "api.workbuddy.example.com."
+dns_a_record_address  = "203.0.113.10"   # reserved documentation range; replace with real LB IP
+ssl_certificate_domain = "api.workbuddy.example.com"
+
+# --- Mail provider apps -------------------------------------------------------
+gmail_redirect_uri  = "https://api.workbuddy.example.com/v1/connectors/gmail/callback"
+gmail_pubsub_topic  = "workbuddy-gmail-notify"
+graph_redirect_uri  = "https://api.workbuddy.example.com/v1/connectors/graph/callback"
+entra_display_name  = "WorkBuddy Production"
+entra_owner_object_ids = []
+
+# --- Workload Identity Federation --------------------------------------------
+workload_identity_pool_id        = "github-actions"
+workload_identity_provider_id    = "github"
+github_repo                      = "acme/workbuddy"
+github_actions_service_account   = "github-actions-deployer"
+
+# --- Observability ------------------------------------------------------------
+grafana_version = "10.4.0"
+
+labels = {
+  app         = "workbuddy"
+  environment = "production"
+  managed_by  = "terraform"
+}

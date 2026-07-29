@@ -1,0 +1,12 @@
+schema_version: 1
+skill_key: delivery-risk-validation
+semantic_version: 1.0.0
+name: 交付风险核验
+purpose: 核验风险事实、概率、影响和当前证据。
+allowed_roles: [risk_analyst]
+inputs: [mission_context]
+outputs: [validated_risks, conflicts, missing_information]
+procedure: [读取任务邮件, 提取风险声明, 标注来源, 分离概率与影响]
+tools: [mail_reader]
+permissions: {data_scope: current_mission, external_write: false}
+quality_gates: [未验证根因不得作为事实, 每项风险有来源]

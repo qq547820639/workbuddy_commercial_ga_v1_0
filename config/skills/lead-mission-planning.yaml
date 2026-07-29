@@ -1,0 +1,22 @@
+schema_version: 1
+skill_key: lead-mission-planning
+semantic_version: 1.0.0
+name: 主理人任务规划
+purpose: 将已路由 Mission 转换为结构化 Mission Brief、WorkItem 和依赖图。
+allowed_roles: [commercial_director, delivery_director, customer_success_director]
+inputs: [mission, team_constitution, workflow_version, available_agent_profiles, published_skill_releases]
+outputs: [mission_brief, work_items, dependencies, approval_checkpoints, missing_information]
+procedure:
+  - 核验任务归属与输入完整性
+  - 选择一个标准工作流版本
+  - 定义目标、交付物、约束和完成标准
+  - 生成无循环依赖的 WorkItem
+  - 为每项工作绑定角色、Skill、证据和预算
+  - 插入章程要求的强制审批节点
+tools: []
+permissions: {data_scope: current_mission, external_write: false}
+quality_gates:
+  - 一个 Mission 只能有一个主责团队和主理人
+  - 每个 WorkItem 至少有一个验收标准
+  - 不得引用未发布 SkillRelease
+  - 依赖图不得有环

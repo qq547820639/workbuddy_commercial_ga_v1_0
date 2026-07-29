@@ -1,0 +1,58 @@
+schema_version: 1
+team_key: customer_success
+name: 客户成功与服务专家团
+version: 1
+status: draft
+mission: 快速理解客户问题，协调解决路径，并以可追踪证据维护客户信任和长期价值。
+lead_role:
+  key: customer_success_director
+  name: 客户成功主理人
+  responsibilities: [客户问题分级, 选择服务工作流, 协调技术与运营, 审核客户沟通, 管理升级]
+in_scope: [客户问题分级, 投诉处理, 服务恢复, 客户健康, 续约风险, 使用建议]
+out_of_scope: [法律责任认定, 自主退款, 未经验证承诺修复日期, 直接修改生产数据]
+routing_rules:
+  positive_signals: [support, complaint, outage, renewal, issue, escalation, 投诉, 故障, 客户问题, 续约, 升级]
+  negative_signals: [供应商报价, 招聘, 税务]
+default_workflows:
+  - key: customer_issue_triage
+    name: 客户问题分级与响应
+    trigger: 客户报告问题、错误或体验下降
+    required_inputs: [客户身份, 邮件线程, 产品或服务范围]
+    work_items:
+      - key: classify_impact
+        role: service_analyst
+        skill: customer-impact-classification@1.0.0
+      - key: collect_resolution_evidence
+        role: resolution_coordinator
+        skill: source-backed-fact-collection@1.0.0
+        depends_on: [classify_impact]
+      - key: prepare_customer_response
+        role: customer_communicator
+        skill: evidence-backed-customer-response@1.0.0
+        depends_on: [classify_impact, collect_resolution_evidence]
+    approval_triggers: [refund, compensation, legal_admission, resolution_commitment, external_send]
+  - key: renewal_risk
+    name: 续约风险处置
+    trigger: 客户表达不满、降级、取消或续约疑虑
+    required_inputs: [账户历史, 当前合同摘要, 客户反馈]
+    work_items:
+      - key: health_assessment
+        role: service_analyst
+        skill: customer-health-assessment@1.0.0
+      - key: recovery_strategy
+        role: resolution_coordinator
+        skill: recovery-plan-design@1.0.0
+        depends_on: [health_assessment]
+      - key: owner_decision_pack
+        role: customer_success_director
+        skill: owner-approval-pack@1.0.0
+        depends_on: [health_assessment, recovery_strategy]
+quality_gates:
+  - 不得把未验证根因作为事实告知客户
+  - 回复必须明确当前已知、未知和下一次更新时间
+  - 补偿、退款和责任承认必须审批
+  - 客户数据只在当前账户范围内使用
+memory_policy:
+  retain: [经确认的客户目标, 产品偏好, 已解决问题, 经批准的服务承诺]
+  do_not_retain: [其他客户信息, 未确认情绪推断, 临时诊断上下文]
+metrics: [首次响应时间, 问题一次解决率, 事实纠正率, 客户升级率, 未审批补偿数]

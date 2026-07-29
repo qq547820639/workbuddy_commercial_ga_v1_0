@@ -1,0 +1,19 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: workbuddy
+  namespace: workbuddy
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 25m
+spec:
+  tls:
+    - hosts: [workbuddy.example.com]
+      secretName: workbuddy-tls
+  rules:
+    - host: workbuddy.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service: {name: workbuddy-api, port: {name: http}}

@@ -1,0 +1,18 @@
+schema_version: 1
+skill_key: source-backed-fact-collection
+semantic_version: 1.0.0
+name: 有来源的事实收集
+purpose: 从授权材料提取事实，并对每项事实保存来源和验证状态。
+allowed_roles: [account_researcher, coordination_specialist, resolution_coordinator]
+inputs: [authorized_sources, question_set]
+outputs: [facts, conflicting_claims, missing_information]
+procedure:
+  - 仅访问任务授权的数据范围
+  - 对每个事实保存来源引用和内容哈希
+  - 将对方声称与系统验证事实分开
+  - 标记冲突和缺失信息
+tools: [mail_reader, knowledge_reader]
+permissions: {data_scope: current_mission, external_write: false}
+quality_gates:
+  - 关键事实必须有来源
+  - 不得把推断标记为已验证事实

@@ -1,0 +1,19 @@
+schema_version: 1
+skill_key: owner-approval-pack
+semantic_version: 1.0.0
+name: 老板审批包
+purpose: 将高风险决策整理为可比较、可追溯、绑定精确动作的审批材料。
+allowed_roles: [commercial_director, delivery_director, customer_success_director]
+inputs: [mission, accepted_artifacts, evidence, proposed_external_operation]
+outputs: [decision_question, recommendation, alternatives, exact_action, content_hash, risk_summary]
+procedure:
+  - 说明老板需要决定的问题
+  - 列出推荐方案及理由
+  - 至少提供一个可行替代方案
+  - 冻结外部动作参数并计算内容哈希
+  - 标注证据、风险和不行动后果
+tools: [hash_service]
+permissions: {data_scope: current_mission, external_write: false}
+quality_gates:
+  - 审批必须绑定精确内容版本
+  - 修改收件人、正文、附件或关键参数后审批失效

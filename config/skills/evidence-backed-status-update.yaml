@@ -1,0 +1,12 @@
+schema_version: 1
+skill_key: evidence-backed-status-update
+semantic_version: 1.0.0
+name: 有证据的状态更新
+purpose: 用已验证事实形成内部或外部状态更新。
+allowed_roles: [coordination_specialist]
+inputs: [validated_risks, recovery_options]
+outputs: [status_update, confirmation_items]
+procedure: [总结已知与未知, 说明当前行动, 标注下一更新时间, 列出待审批承诺]
+tools: []
+permissions: {data_scope: current_mission, external_write: false}
+quality_gates: [不承诺未批准日期, 关键事实可追溯]

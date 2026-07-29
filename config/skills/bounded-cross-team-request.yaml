@@ -1,0 +1,18 @@
+schema_version: 1
+skill_key: bounded-cross-team-request
+semantic_version: 1.0.0
+name: 有边界的跨专家团协作请求
+purpose: 向协作专家团提交明确输入、目标、数据范围、交付物和截止时间。
+allowed_roles: [commercial_director, delivery_director, customer_success_director]
+inputs: [mission, receiving_team, objective, source_artifacts]
+outputs: [collaboration_request]
+procedure:
+  - 确认协作不会转移主责
+  - 定义单一、可验收的协作目标
+  - 最小化共享的数据范围
+  - 指定成果类型、证据要求和截止时间
+tools: []
+permissions: {data_scope: current_mission, external_write: false}
+quality_gates:
+  - 请求必须有明确交付物
+  - 不得共享与协作目标无关的数据

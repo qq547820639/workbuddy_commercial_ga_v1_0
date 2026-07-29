@@ -1,0 +1,26 @@
+﻿ID,Priority,Area,Title,Acceptance Criteria,Milestone,Story Points,Status
+WBB-041,P0,Model,实现 Provider-neutral Model Gateway,结构化输出、Schema 校验、调用审计和成本记录,Controlled Beta,8,COMPLETE
+WBB-042,P0,Agent,将 AgentRun 接入真实执行服务,前端不再伪造执行结果；Run 输出形成 Artifact/Evidence,Controlled Beta,8,COMPLETE
+WBB-043,P0,Quality,实现 Evidence 质量门,证据覆盖不足时主理人不能接受 WorkItem,Controlled Beta,5,COMPLETE
+WBB-044,P0,Skill,实现 Skill 测试和发布生命周期,未经测试和批准的版本不能发布,Controlled Beta,5,COMPLETE
+WBB-045,P0,Dispatch,实现影子试点反馈与指标,记录纠正、团队准确率和高风险建议,Controlled Beta,5,COMPLETE
+WBB-046,P0,Mail,分离 Gmail read/send scope,只读授权不能发送；发送需重新授权,Controlled Beta,5,COMPLETE
+WBB-047,P0,Mail,实现 Gmail Pub/Sub 去重与同步运行,messageId 去重、history cursor 与 RESYNC_REQUIRED,Controlled Beta,8,CODE_COMPLETE_EXTERNAL_DRILL_PENDING
+WBB-048,P0,Mail,实现 Microsoft Graph folder delta,各文件夹独立 delta cursor,Controlled Beta,8,CODE_COMPLETE_EXTERNAL_DRILL_PENDING
+WBB-049,P0,Mail,实现 Graph subscription 生命周期,创建、续订、clientState 校验和 webhook 去重,Controlled Beta,8,CODE_COMPLETE_EXTERNAL_DRILL_PENDING
+WBB-050,P0,Security,实现 WebhookBinding 安全租户路由,预租户查询不含邮件内容/凭据；随后切换 forced RLS,Controlled Beta,5,COMPLETE
+WBB-051,P0,Policy,实现部署/租户双白名单,每个 To/CC/BCC 均同时通过两层白名单,Controlled Beta,5,COMPLETE
+WBB-052,P0,Policy,实现发送限额与 BCC/附件双开关,每日/Mission 限额；高风险能力默认关闭,Controlled Beta,5,COMPLETE
+WBB-053,P0,Operation,实现 OperationAttempt,每次 Provider 尝试单独记录且可追溯,Controlled Beta,5,COMPLETE
+WBB-054,P0,Operation,实现 Gmail 真实发送适配器,审批哈希、幂等键、MIME、线程回复和 Provider message ID,Controlled Beta,8,CODE_COMPLETE_EXTERNAL_DRILL_PENDING
+WBB-055,P0,Operation,实现 Graph 草稿发送适配器,Immutable ID、异步核验和 UNKNOWN,Controlled Beta,8,CODE_COMPLETE_EXTERNAL_DRILL_PENDING
+WBB-056,P0,Operation,强化 Gmail 核验,只有消息带 SENT 标签才成功,Controlled Beta,3,COMPLETE
+WBB-057,P0,Safety,实现 UNKNOWN 恢复,禁止直接重试；只能核验或新建操作,Controlled Beta,5,COMPLETE
+WBB-058,P0,Operations,实现证据化 Gate B/C/D,配置预检与现场通过状态分离,Controlled Beta,5,COMPLETE
+WBB-059,P1,Frontend,实现 Beta 运营页,展示 Gate、同步、调度、模型调用和质量,Controlled Beta,5,COMPLETE
+WBB-060,P0,Platform,实现 Worker 续订与恢复,Outbox、AgentRun、Gmail watch、Graph subscription,Controlled Beta,8,COMPLETE
+WBB-061,P0,Database,新增 Controlled Beta 迁移,0005–0008 从空库升级通过,Controlled Beta,5,COMPLETE
+WBB-062,P0,QA,Controlled Beta 自动化测试,32 项测试和黄金路径通过,Controlled Beta,8,COMPLETE
+WBB-063,P0,Deployment,提供 Docker staging 拓扑,Postgres、migrate、API、Worker 和健康检查,Controlled Beta,5,COMPLETE
+WBB-064,P0,Documentation,提供部署/邮箱/安全/运营手册,所有外部依赖和发布门明确,Controlled Beta,5,COMPLETE
+WBB-065,P0,External,完成真实 Provider 现场演练,需要实际 OAuth、云资源、白名单邮箱和责任人签字,Controlled Beta,13,OPERATOR_OWNED_PENDING

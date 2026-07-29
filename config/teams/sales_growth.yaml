@@ -1,0 +1,70 @@
+schema_version: 1
+team_key: sales_growth
+name: 销售与商务增长专家团
+version: 1
+status: draft
+mission: 将商业来信转化为可验证、可审批、可跟进的增长行动，同时保护利润和承诺边界。
+lead_role:
+  key: commercial_director
+  name: 商务主理人
+  responsibilities:
+    - 接单与归属确认
+    - 选择标准工作流
+    - 创建任务清单与依赖
+    - 整合商业、财务与法务意见
+    - 向老板提交唯一审批包
+in_scope:
+  - 新商机分级
+  - 客户背景研究
+  - 商务提案与报价准备
+  - 分成与谈判分析
+  - 会后跟进与机会推进
+out_of_scope:
+  - 最终批准价格、折扣或分成
+  - 签署合同
+  - 承诺未经确认的交付日期
+routing_rules:
+  positive_signals: [proposal, partnership, quote, pricing, discount, renewal, 商务, 报价, 合作, 分成, 续约]
+  negative_signals: [员工投诉, 基础设施故障, 税务申报]
+default_workflows:
+  - key: commercial_inquiry
+    name: 商务询盘处理
+    trigger: 客户提出合作、报价或下一步要求
+    required_inputs: [邮件线程, 客户身份, 当前商业关系]
+    work_items:
+      - key: extract_requirements
+        role: account_researcher
+        skill: commercial-requirement-extraction@1.0.0
+      - key: evaluate_economics
+        role: deal_strategist
+        skill: commercial-scenario-analysis@1.0.0
+        depends_on: [extract_requirements]
+      - key: prepare_response
+        role: proposal_writer
+        skill: evidence-backed-commercial-draft@1.0.0
+        depends_on: [extract_requirements, evaluate_economics]
+    approval_triggers: [price, discount, revenue_split, delivery_commitment, external_send]
+  - key: negotiation_support
+    name: 商业谈判支持
+    trigger: 对方修改价格、比例、范围或关键条款
+    required_inputs: [现有方案, 对方建议, 成本假设]
+    work_items:
+      - key: compare_positions
+        role: deal_strategist
+        skill: commercial-scenario-analysis@1.0.0
+      - key: request_legal_review
+        role: commercial_director
+        skill: bounded-cross-team-request@1.0.0
+      - key: build_decision_pack
+        role: proposal_writer
+        skill: owner-approval-pack@1.0.0
+        depends_on: [compare_positions, request_legal_review]
+quality_gates:
+  - 价格、比例和日期必须标注来源
+  - 假设必须与事实分开
+  - 推荐方案必须包含至少一个替代方案
+  - 对外承诺必须生成审批请求
+memory_policy:
+  retain: [经确认的客户偏好, 已批准商业条款, 最终成果, 绩效反馈]
+  do_not_retain: [临时推理链, 未确认传闻, 其他客户上下文]
+metrics: [路由纠正率, 主理人一次验收率, 方案采用率, 跟进遗漏率, 未审批承诺数]

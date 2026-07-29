@@ -1,0 +1,12 @@
+schema_version: 1
+skill_key: commercial-requirement-extraction
+semantic_version: 1.0.0
+name: 商务需求提取
+purpose: 从邮件线程中提取客户目标、商业请求、时间要求和缺失信息。
+allowed_roles: [account_researcher]
+inputs: [mission_context]
+outputs: [requirements, deadlines, missing_information]
+procedure: [读取当前任务邮件, 区分明确请求与推断, 标注金额日期和比例, 输出缺失信息]
+tools: [mail_reader]
+permissions: {data_scope: current_mission, external_write: false}
+quality_gates: [每项请求引用原邮件, 不把推断写成客户承诺]

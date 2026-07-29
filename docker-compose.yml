@@ -1,0 +1,109 @@
+name: workbuddy-commercial-ga
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: workbuddy
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-workbuddy-local-only}
+      POSTGRES_DB: workbuddy
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U workbuddy -d workbuddy"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - workbuddy_pg:/var/lib/postgresql/data
+
+  migrate:
+    build: .
+    environment: &workbuddy-env
+      WORKBUDDY_ENVIRONMENT: ${WORKBUDDY_ENVIRONMENT:-local}
+      WORKBUDDY_DATABASE_URL: postgresql+psycopg://workbuddy:${POSTGRES_PASSWORD:-workbuddy-local-only}@postgres:5432/workbuddy
+      WORKBUDDY_APP_SECRET: ${WORKBUDDY_APP_SECRET:-local-development-secret-change-me-123456}
+      WORKBUDDY_TOKEN_ENCRYPTION_KEY: ${WORKBUDDY_TOKEN_ENCRYPTION_KEY:-}
+      WORKBUDDY_DEFAULT_TENANT_ID: ${WORKBUDDY_DEFAULT_TENANT_ID:-00000000-0000-0000-0000-000000000001}
+      WORKBUDDY_PUBLIC_BASE_URL: ${WORKBUDDY_PUBLIC_BASE_URL:-http://localhost:8000}
+      WORKBUDDY_OBJECT_STORE_DIR: /app/var/objects
+      WORKBUDDY_OBJECT_STORE_PROVIDER: ${WORKBUDDY_OBJECT_STORE_PROVIDER:-filesystem}
+      WORKBUDDY_OBJECT_STORE_BUCKET: ${WORKBUDDY_OBJECT_STORE_BUCKET:-}
+      WORKBUDDY_OBJECT_STORE_REGION: ${WORKBUDDY_OBJECT_STORE_REGION:-}
+      WORKBUDDY_OBJECT_STORE_ENDPOINT: ${WORKBUDDY_OBJECT_STORE_ENDPOINT:-}
+      WORKBUDDY_CONFIG_DIR: /app/config
+      WORKBUDDY_AUTH_MODE: ${WORKBUDDY_AUTH_MODE:-local_headers}
+      WORKBUDDY_AUTH_JWT_SECRET: ${WORKBUDDY_AUTH_JWT_SECRET:-}
+      WORKBUDDY_AUTH_JWT_ALGORITHM: ${WORKBUDDY_AUTH_JWT_ALGORITHM:-HS256}
+      WORKBUDDY_AUTH_OIDC_ISSUER: ${WORKBUDDY_AUTH_OIDC_ISSUER:-}
+      WORKBUDDY_AUTH_OIDC_AUDIENCE: ${WORKBUDDY_AUTH_OIDC_AUDIENCE:-}
+      WORKBUDDY_AUTH_JWKS_URL: ${WORKBUDDY_AUTH_JWKS_URL:-}
+      WORKBUDDY_AUTH_TENANT_CLAIM: ${WORKBUDDY_AUTH_TENANT_CLAIM:-tenant_id}
+      WORKBUDDY_AUTH_ROLES_CLAIM: ${WORKBUDDY_AUTH_ROLES_CLAIM:-roles}
+      WORKBUDDY_BACKUP_BUCKET: ${WORKBUDDY_BACKUP_BUCKET:-}
+      WORKBUDDY_ALERT_WEBHOOK_URL: ${WORKBUDDY_ALERT_WEBHOOK_URL:-}
+      WORKBUDDY_PILOT_NAME: ${WORKBUDDY_PILOT_NAME:-WorkBuddy Production Pilot}
+      WORKBUDDY_MODEL_PROVIDER: ${WORKBUDDY_MODEL_PROVIDER:-deterministic}
+      WORKBUDDY_MODEL_NAME: ${WORKBUDDY_MODEL_NAME:-gpt-5-mini}
+      WORKBUDDY_MODEL_BASE_URL: ${WORKBUDDY_MODEL_BASE_URL:-https://api.openai.com/v1}
+      WORKBUDDY_MODEL_API_KEY: ${WORKBUDDY_MODEL_API_KEY:-}
+      WORKBUDDY_MODEL_DAILY_BUDGET_CNY_FEN: ${WORKBUDDY_MODEL_DAILY_BUDGET_CNY_FEN:-10000}
+      WORKBUDDY_MODEL_INPUT_COST_CNY_FEN_PER_MILLION: ${WORKBUDDY_MODEL_INPUT_COST_CNY_FEN_PER_MILLION:-0}
+      WORKBUDDY_MODEL_OUTPUT_COST_CNY_FEN_PER_MILLION: ${WORKBUDDY_MODEL_OUTPUT_COST_CNY_FEN_PER_MILLION:-0}
+      WORKBUDDY_GMAIL_CLIENT_ID: ${WORKBUDDY_GMAIL_CLIENT_ID:-}
+      WORKBUDDY_GMAIL_CLIENT_SECRET: ${WORKBUDDY_GMAIL_CLIENT_SECRET:-}
+      WORKBUDDY_GMAIL_REDIRECT_URI: ${WORKBUDDY_GMAIL_REDIRECT_URI:-http://localhost:8000/v1/connectors/gmail/callback}
+      WORKBUDDY_GMAIL_TOPIC_NAME: ${WORKBUDDY_GMAIL_TOPIC_NAME:-}
+      WORKBUDDY_GMAIL_PUBSUB_VERIFICATION_TOKEN: ${WORKBUDDY_GMAIL_PUBSUB_VERIFICATION_TOKEN:-}
+      WORKBUDDY_GRAPH_CLIENT_ID: ${WORKBUDDY_GRAPH_CLIENT_ID:-}
+      WORKBUDDY_GRAPH_CLIENT_SECRET: ${WORKBUDDY_GRAPH_CLIENT_SECRET:-}
+      WORKBUDDY_GRAPH_TENANT: ${WORKBUDDY_GRAPH_TENANT:-common}
+      WORKBUDDY_GRAPH_REDIRECT_URI: ${WORKBUDDY_GRAPH_REDIRECT_URI:-http://localhost:8000/v1/connectors/graph/callback}
+      WORKBUDDY_GRAPH_WEBHOOK_CLIENT_STATE: ${WORKBUDDY_GRAPH_WEBHOOK_CLIENT_STATE:-}
+      WORKBUDDY_GRAPH_SUBSCRIPTION_HOURS: ${WORKBUDDY_GRAPH_SUBSCRIPTION_HOURS:-70}
+      WORKBUDDY_ENABLE_LIVE_EMAIL_SEND: ${WORKBUDDY_ENABLE_LIVE_EMAIL_SEND:-false}
+      WORKBUDDY_REQUIRE_PILOT_FOR_LIVE_SEND: ${WORKBUDDY_REQUIRE_PILOT_FOR_LIVE_SEND:-false}
+      WORKBUDDY_ALLOWED_RECIPIENT_DOMAINS: ${WORKBUDDY_ALLOWED_RECIPIENT_DOMAINS:-}
+      WORKBUDDY_ALLOWED_RECIPIENT_ADDRESSES: ${WORKBUDDY_ALLOWED_RECIPIENT_ADDRESSES:-}
+      WORKBUDDY_DAILY_SEND_LIMIT: ${WORKBUDDY_DAILY_SEND_LIMIT:-20}
+      WORKBUDDY_MISSION_SEND_LIMIT: ${WORKBUDDY_MISSION_SEND_LIMIT:-3}
+      WORKBUDDY_ALLOW_BCC: ${WORKBUDDY_ALLOW_BCC:-false}
+      WORKBUDDY_ALLOW_ATTACHMENTS: ${WORKBUDDY_ALLOW_ATTACHMENTS:-false}
+      WORKBUDDY_DISPATCH_SHADOW_MODE: ${WORKBUDDY_DISPATCH_SHADOW_MODE:-true}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["alembic", "upgrade", "head"]
+
+  api:
+    build: .
+    restart: unless-stopped
+    environment: *workbuddy-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    command: ["sh", "-c", "workbuddy-seed && uvicorn workbuddy.api.main:app --host 0.0.0.0 --port 8000"]
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/ready', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+    volumes:
+      - workbuddy_objects:/app/var/objects
+
+  worker:
+    build: .
+    restart: unless-stopped
+    environment: *workbuddy-env
+    depends_on:
+      api:
+        condition: service_healthy
+    command: ["workbuddy-worker"]
+    volumes:
+      - workbuddy_objects:/app/var/objects
+
+volumes:
+  workbuddy_pg:
+  workbuddy_objects:

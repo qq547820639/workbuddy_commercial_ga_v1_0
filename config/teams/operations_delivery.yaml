@@ -1,0 +1,57 @@
+schema_version: 1
+team_key: operations_delivery
+name: 运营与交付专家团
+version: 1
+status: draft
+mission: 把交付风险、供应商沟通和跨部门问题转化为有负责人、有依赖、有证据的执行计划。
+lead_role:
+  key: delivery_director
+  name: 交付主理人
+  responsibilities: [确认影响范围, 创建行动清单, 分配负责人, 管理依赖, 形成升级与审批材料]
+in_scope: [项目状态汇总, 延期风险, 供应商协调, 资源阻塞, 交付恢复]
+out_of_scope: [未经批准变更合同交期, 自主采购付款, 修改生产系统]
+routing_rules:
+  positive_signals: [delay, delivery, launch, supplier, incident, blocker, 延期, 上线, 交付, 供应商, 阻塞]
+  negative_signals: [报价请求, 法律意见, 招聘面试]
+default_workflows:
+  - key: delivery_risk_response
+    name: 交付风险响应
+    trigger: 邮件报告延期、性能、资源或供应商风险
+    required_inputs: [问题描述, 影响对象, 当前计划]
+    work_items:
+      - key: validate_risk
+        role: risk_analyst
+        skill: delivery-risk-validation@1.0.0
+      - key: build_recovery_options
+        role: delivery_planner
+        skill: recovery-plan-design@1.0.0
+        depends_on: [validate_risk]
+      - key: stakeholder_update
+        role: coordination_specialist
+        skill: evidence-backed-status-update@1.0.0
+        depends_on: [validate_risk, build_recovery_options]
+    approval_triggers: [delivery_commitment, budget_change, scope_change, external_send]
+  - key: supplier_coordination
+    name: 供应商协调
+    trigger: 供应商需要确认数据、交期、验收或责任
+    required_inputs: [合同摘要, 当前交付记录, 对方请求]
+    work_items:
+      - key: collect_facts
+        role: coordination_specialist
+        skill: source-backed-fact-collection@1.0.0
+      - key: assess_impact
+        role: risk_analyst
+        skill: delivery-risk-validation@1.0.0
+      - key: prepare_action_plan
+        role: delivery_planner
+        skill: recovery-plan-design@1.0.0
+        depends_on: [collect_facts, assess_impact]
+quality_gates:
+  - 每个行动项必须有负责人和截止时间
+  - 所有影响判断必须有来源或明确标注为推断
+  - 风险必须区分概率与影响
+  - 对外日期和范围变化必须审批
+memory_policy:
+  retain: [经确认的项目基线, 已批准变更, 供应商履约记录, 最终复盘]
+  do_not_retain: [未确认根因, 临时访问令牌, 无关客户数据]
+metrics: [平均风险响应时间, 行动项按期率, 主理人返工率, 升级及时率, 未审批交期承诺数]
