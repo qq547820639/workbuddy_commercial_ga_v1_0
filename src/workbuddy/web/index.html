@@ -11,17 +11,47 @@
 </head>
 <body><div class="app"><aside class="side"><div class="brand">WorkBuddy<small>EXPERT TEAM OS · COMMERCIAL GA</small></div><nav class="nav" id="nav"></nav><div style="position:absolute;bottom:16px;padding:10px;color:var(--muted);font-size:12px"><span class="pill"><span class="dot"></span> Commercial GA v1.0</span><br>真实发送默认关闭，需白名单与审批</div></aside><main class="main"><header class="top"><h1 id="pageTitle">公司运行看板</h1><div class="row"><span class="tag purple">真人老板</span><button class="btn sm" onclick="setToken()">访问令牌</button><button class="btn sm" onclick="reload()">刷新</button></div></header><section class="content" id="view"></section></main></div><dialog id="modal"><div class="modal-head"><strong id="modalTitle"></strong><button class="close" onclick="modal.close()">×</button></div><div class="modal-body" id="modalBody"></div></dialog>
 <script>
-const TENANT='00000000-0000-0000-0000-000000000001';let page='dashboard';let cache={};const pages=[['dashboard','公司看板'],['inbox','邮箱与调度'],['missions','主理人任务'],['teams','专家团'],['skills','Skill 库'],['approvals','老板审批'],['pilot','Beta 运营'],['production','生产试点'],['commercial','商用与 GA'],['governance','治理与数据'],['audit','审计与事件']];
+const TENANT='00000000-0000-0000-0000-000000000001';let page='dashboard';let cache={};let refreshTimer=null;let workspaceTeamKey=null;let workspaceMissionFilter='active';let workspaceExpandedMission=null;const pages=[['dashboard','公司看板'],['inbox','邮箱与调度'],['missions','主理人任务'],['teams','专家团'],['workspace','专家团工作区'],['skills','Skill 库'],['approvals','老板审批'],['pilot','Beta 运营'],['production','生产试点'],['commercial','商用与 GA'],['governance','治理与数据'],['audit','审计与事件']];
 const $=s=>document.querySelector(s);const modal=$('#modal');
 function esc(s){const d=document.createElement('div');d.textContent=s??'';return d.innerHTML}
 async function api(path,opts={}){const token=sessionStorage.getItem('workbuddy_token');opts.headers={...(opts.headers||{}),'X-Tenant-ID':TENANT,'X-Actor-ID':'owner','X-Roles':'owner product_owner security_owner operations_owner privacy_owner platform_owner it_admin ai_platform_owner business_owner finance_owner legal_owner support_owner'};if(token)opts.headers['Authorization']='Bearer '+token;if(opts.body && !(opts.body instanceof FormData)){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(opts.body)}const r=await fetch(path,opts);let data;try{data=await r.json()}catch{data={detail:await r.text()}}if(!r.ok)throw new Error(data.detail||r.statusText);return data}
 function tag(status){let c='blue';if(/COMPLETED|ACCEPTED|APPROVED|SUCCEEDED|CLOSED|CONFIRMED|published/i.test(status))c='green';if(/FAILED|REJECTED|BLOCKED|CANCELLED|INVALID/i.test(status))c='red';if(/APPROVAL|WAIT|PENDING|REVIEW|UNKNOWN|PLANNING/i.test(status))c='amber';return `<span class="tag ${c}">${esc(status)}</span>`}
-function setPage(p){page=p;document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));$('#pageTitle').textContent=pages.find(x=>x[0]===p)[1];render()}
+function setPage(p){if(refreshTimer){clearInterval(refreshTimer);refreshTimer=null}page=p;document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.p===p));$('#pageTitle').textContent=pages.find(x=>x[0]===p)[1];render()}
 $('#nav').innerHTML=pages.map(([p,n])=>`<button data-p="${p}" onclick="setPage('${p}')">${n}</button>`).join('');
 function notice(msg,type=''){return `<div class="notice ${type}">${msg}</div>`}
 async function reload(){cache={};await render()}
-async function render(){const v=$('#view');v.innerHTML='<div class="empty">正在加载…</div>';try{if(page==='dashboard')await dashboard(v);if(page==='inbox')await inbox(v);if(page==='missions')await missions(v);if(page==='teams')await teams(v);if(page==='skills')await skills(v);if(page==='approvals')await approvals(v);if(page==='pilot')await pilot(v);if(page==='production')await production(v);if(page==='commercial')await commercial(v);if(page==='governance')await governance(v);if(page==='audit')await audit(v)}catch(e){v.innerHTML=notice(esc(e.message),'error')}}
-async function dashboard(v){const d=await api('/v1/dashboard');v.innerHTML=`<div class="toolbar"><button class="btn primary" onclick="bootstrap()">载入演示邮件</button><button class="btn" onclick="publishOutbox()">发布 Outbox</button><button class="btn danger" onclick="resetDemo()">重置运行数据</button></div><div class="kpis"><div class="kpi"><strong>${d.inbox_pending}</strong><span class="muted">待调度邮件</span></div><div class="kpi"><strong>${d.active_runs}</strong><span class="muted">运行中的 AgentRun</span></div><div class="kpi"><strong>${d.pending_approvals}</strong><span class="muted">等待老板审批</span></div><div class="kpi"><strong>${d.outbox_pending}</strong><span class="muted">待发布领域事件</span></div></div><h2 class="section">专家团运行看板</h2><div class="grid">${d.teams.map(t=>`<article class="card click" onclick="openTeam('${t.id}')"><div class="row between"><div class="title">${esc(t.name)}</div>${t.approval_required?tag(t.approval_required+' 待审批'):tag('运行中')}</div><p class="muted">主理人：${esc(t.lead)}</p><div class="two"><div><strong>${t.lead_queue}</strong><div class="muted">主理人队列</div></div><div><strong>${t.active}</strong><div class="muted">活跃任务</div></div></div>${t.missions.length?`<div style="margin-top:12px" class="stack">${t.missions.map(m=>`<div class="row between"><span>${esc(m.title).slice(0,28)}</span>${tag(m.status)}</div>`).join('')}</div>`:'<p class="muted">暂无任务</p>'}</article>`).join('')}</div>`}
+async function render(){const v=$('#view');v.innerHTML='<div class="empty">正在加载…</div>';try{if(page==='dashboard')await dashboard(v);if(page==='inbox')await inbox(v);if(page==='missions')await missions(v);if(page==='teams')await teams(v);if(page==='workspace')await workspace(v);if(page==='skills')await skills(v);if(page==='approvals')await approvals(v);if(page==='pilot')await pilot(v);if(page==='production')await production(v);if(page==='commercial')await commercial(v);if(page==='governance')await governance(v);if(page==='audit')await audit(v)}catch(e){v.innerHTML=notice(esc(e.message),'error')}}
+async function dashboard(v){
+  const d=await api('/v1/dashboard');
+  const cards=await Promise.all(d.teams.map(t=>api(`/v1/teams/${t.team_key}/dashboard`).catch(()=>null)));
+  const enriched=d.teams.map((t,i)=>Object.assign({id:t.id,team_key:t.team_key},cards[i]||{})).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+  window._dash={d,enriched};
+  dashboardRender(v);
+  if(refreshTimer)clearInterval(refreshTimer);
+  refreshTimer=setInterval(()=>{if(page!=='dashboard')return;dashboardPoll()},30000);
+}
+async function dashboardPoll(){
+  try{
+    const d=await api('/v1/dashboard');
+    const cards=await Promise.all(d.teams.map(t=>api(`/v1/teams/${t.team_key}/dashboard`).catch(()=>null)));
+    const enriched=d.teams.map((t,i)=>Object.assign({id:t.id,team_key:t.team_key},cards[i]||{})).sort((a,b)=>(a.name||'').localeCompare(b.name||''));
+    window._dash={d,enriched};
+    if(page==='dashboard')dashboardRender($('#view'));
+  }catch(e){}
+}
+function dashboardRender(v){
+  const d=(window._dash&&window._dash.d)||{inbox_pending:0,active_runs:0,pending_approvals:0,outbox_pending:0};
+  const enriched=(window._dash&&window._dash.enriched)||[];
+  v.innerHTML=`<div class="toolbar"><button class="btn primary" onclick="bootstrap()">载入演示邮件</button><button class="btn" onclick="publishOutbox()">发布 Outbox</button><button class="btn danger" onclick="resetDemo()">重置运行数据</button><span class="muted" style="margin-left:auto">最后更新：${esc(new Date().toLocaleTimeString())}</span></div><div class="kpis"><div class="kpi"><strong>${d.inbox_pending}</strong><span class="muted">待调度邮件</span></div><div class="kpi"><strong>${d.active_runs}</strong><span class="muted">运行中的 AgentRun</span></div><div class="kpi"><strong>${d.pending_approvals}</strong><span class="muted">等待老板审批</span></div><div class="kpi"><strong>${d.outbox_pending}</strong><span class="muted">待发布领域事件</span></div></div><h2 class="section">专家团 AI 员工看板</h2><div class="grid">${enriched.length?enriched.map(teamCardHTML).join(''):'<div class="empty">暂无专家团</div>'}</div>`;
+}
+function teamCardHTML(t){
+  const mission=esc((t.mission||'').slice(0,70))||'<span class="muted">未设定使命</span>';
+  const pending=t.pending_approvals_count?`<span class="tag amber">${t.pending_approvals_count} 待审批</span>`:'<span class="tag green">无待审批</span>';
+  const inProg=t.in_progress_missions_count!=null?t.in_progress_missions_count:0;
+  const actWi=t.active_workitems_count!=null?t.active_workitems_count:0;
+  const upd=(t.last_updated_at||'').slice(11,16)||'—';
+  return `<article class="card click" onclick="showTeamWorkspace('${esc(t.team_key)}')"><div class="row between"><div class="title">${esc(t.name||t.team_key)}</div>${t.active===false?'<span class="tag">已停用</span>':'<span class="tag green">运行中</span>'}</div><div class="muted" style="font-size:11px">team_key: ${esc(t.team_key)}</div><p class="muted">主理人：${esc(t.lead_agent||'未配置')}</p><p style="margin:8px 0;min-height:22px">${mission}</p><div class="two"><div><strong>${inProg}</strong><div class="muted">进行中 Mission</div></div><div><strong>${actWi}</strong><div class="muted">活跃 WorkItem</div></div></div><div class="row between" style="margin-top:10px"><span>${pending}</span><span class="muted" style="font-size:11px">更新：${esc(upd)}</span></div></article>`;
+}
 async function bootstrap(){await api('/v1/demo/bootstrap',{method:'POST'});setPage('inbox')}
 async function publishOutbox(){const d=await api('/v1/outbox/publish',{method:'POST'});alert(`已发布 ${d.published}，失败 ${d.failed}`);reload()}
 async function resetDemo(){if(!confirm('清除运行数据，但保留专家团、工作流和 Skill？'))return;await api('/v1/demo/reset',{method:'POST'});setPage('dashboard')}
@@ -99,4 +129,157 @@ async function deleteData(){if(prompt('输入 DELETE OPERATIONAL DATA 以确认'
 async function audit(v){const [rows,verify]=await Promise.all([api('/v1/audit?limit=300'),api('/v1/audit/verify')]);v.innerHTML=`${notice(verify.valid?'审计哈希链校验通过':'审计链在 '+verify.broken_at+' 处损坏',verify.valid?'ok':'error')}<table class="table"><thead><tr><th>时间</th><th>事件</th><th>对象</th><th>执行者</th><th>哈希</th></tr></thead><tbody>${rows.map(e=>`<tr><td>${esc(e.occurred_at)}</td><td><strong>${esc(e.action)}</strong><br><span class="muted">${esc(JSON.stringify(e.payload)).slice(0,120)}</span></td><td>${esc(e.aggregate_type)}<br><span class="muted">${esc(e.aggregate_id)}</span></td><td>${esc(e.actor_type)}:${esc(e.actor_id)}</td><td class="json">${esc(e.event_hash.slice(0,14))}…</td></tr>`).join('')}</tbody></table>`}
 function showModal(title,html){$('#modalTitle').textContent=title;$('#modalBody').innerHTML=html;modal.showModal()}
 setPage('dashboard');
+
+/* ===== 专家团工作区 (Task 7) ===== */
+function showTeamWorkspace(teamKey){workspaceTeamKey=teamKey;workspaceExpandedMission=null;setPage('workspace')}
+async function workspace(v){
+  const tk=workspaceTeamKey;
+  if(!tk){v.innerHTML=`<div class="empty">请从「公司看板」点击一个专家团卡片进入工作区。<br><button class="btn primary" style="margin-top:14px" onclick="setPage('dashboard')">返回公司看板</button></div>`;return}
+  v.innerHTML='<div class="empty">正在加载工作区…</div>';
+  try{
+    const [ws,teamsRaw]=await Promise.all([api(`/v1/teams/${tk}/workspace`),api('/v1/teams')]);
+    const team=teamsRaw.find(x=>x.team_key===tk)||{};
+    window._ws={tk,ws,team,teams:teamsRaw,profileMap:{},teamIdMap:{}};
+    teamsRaw.forEach(t=>window._ws.teamIdMap[t.id]={name:t.name,team_key:t.team_key});
+    (team.agents||[]).forEach(a=>window._ws.profileMap[a.id]={role_key:a.role_key,name:a.name,is_lead:a.is_lead,status:a.status});
+    window._ws.missions=await api(`/v1/teams/${tk}/missions?status_filter=${workspaceMissionFilter}`);
+    window._ws.constitutions=await api(`/v1/teams/${tk}/constitutions`).catch(()=>[]);
+    workspaceRender(v);
+    if(refreshTimer)clearInterval(refreshTimer);
+    refreshTimer=setInterval(()=>{if(page!=='workspace'||workspaceTeamKey!==tk)return;workspacePoll(tk)},15000);
+  }catch(e){v.innerHTML=notice(esc(e.message),'error')}
+}
+function workspaceRender(v){
+  const {ws,team}=window._ws;
+  v.innerHTML=`<div class="row between" style="margin-bottom:14px"><button class="btn sm" onclick="setPage('dashboard')">← 返回看板</button><span class="muted" id="wsUpdatedAt">最后更新：${esc(new Date().toLocaleTimeString())}</span></div>${wsIdentityHTML(ws,team)}${wsConstitutionHTML()}${wsMembersHTML()}<div id="wsMissions">${wsMissionsHTML()}</div><div id="wsMissionDetail"></div>${wsSkillsHTML()}<div id="wsCollab">${wsCollabHTML()}</div>${wsMemoryHTML()}`;
+}
+async function workspacePoll(tk){
+  try{
+    const ws=await api(`/v1/teams/${tk}/workspace`);
+    const missions=await api(`/v1/teams/${tk}/missions?status_filter=${workspaceMissionFilter}`);
+    window._ws.ws=ws;window._ws.missions=missions;
+    const u=$('#wsUpdatedAt');if(u)u.textContent='最后更新：'+new Date().toLocaleTimeString();
+    const m=$('#wsMissions');if(m)m.innerHTML=wsMissionsHTML();
+    const c=$('#wsCollab');if(c)c.innerHTML=wsCollabHTML();
+    if(workspaceExpandedMission)renderWsMissionDetail(workspaceExpandedMission);
+  }catch(e){}
+}
+function wsIdentityHTML(ws,team){
+  const t=ws.team||{};const c=(ws.constitution&&ws.constitution.config)||{};
+  const tools=c.allowed_tools||c.tools||[];
+  return `<section class="card"><div class="row between"><div><div class="title">${esc(t.name||'')}</div><div class="muted" style="font-size:11px">team_key: ${esc(t.team_key||'')} · ${t.active===false?'已停用':'运行中'}</div></div>${tag(t.active===false?'INACTIVE':'ACTIVE')}</div><p style="margin:10px 0">${esc(t.mission||c.mission||'未设定使命')}</p><div class="two"><div><h4>职责范围 (in_scope)</h4><ul>${(c.in_scope||[]).length?(c.in_scope||[]).map(x=>`<li>${esc(x)}</li>`).join(''):'<li class="muted">未定义</li>'}</ul></div><div><h4>明确不负责 (out_of_scope)</h4><ul>${(c.out_of_scope||[]).length?(c.out_of_scope||[]).map(x=>`<li>${esc(x)}</li>`).join(''):'<li class="muted">未定义</li>'}</ul></div></div><p class="muted">主理人：${esc((team.agents||[]).find(a=>a.is_lead)?.name||'未配置')}</p><p class="muted">当前生效章程：${ws.constitution?`v${esc(ws.constitution.version)} · ${tag(ws.constitution.status)} · allowed_tools: ${esc(JSON.stringify(tools))}`:'未发布章程'}</p></section>`;
+}
+function wsConstitutionHTML(){
+  const {tk,ws,constitutions}=window._ws;
+  const cur=ws.constitution;const list=constitutions||[];
+  const versions=list.map(v=>{
+    let btn='';
+    if(v.status==='draft')btn=`<button class="btn sm primary" onclick="constitutionAction('${v.id}','submit-review')">提交审核</button>`;
+    else if(v.status==='reviewing')btn=`<button class="btn sm primary" onclick="constitutionAction('${v.id}','approve')">审核通过</button>`;
+    else if(v.status==='approved')btn=`<button class="btn sm primary" onclick="constitutionAction('${v.id}','publish')">发布</button>`;
+    else if(v.status==='published')btn=`<span class="tag green">当前生效</span>`;
+    return `<tr><td>v${esc(v.version)}</td><td>${tag(v.status)}</td><td class="json">${esc((v.content_hash||'').slice(0,12))}…</td><td>${btn}</td></tr>`;
+  }).join('');
+  return `<section class="card" id="wsConstitution"><h3 style="margin-top:0">身份与章程</h3><p class="muted">当前生效章程（只读）：${cur?`v${esc(cur.version)} · ${tag(cur.status)}`:'无'}</p>${cur?`<details><summary class="muted">查看当前章程配置</summary><pre class="json">${esc(JSON.stringify(cur.config,null,2))}</pre></details>`:''}<div class="toolbar"><button class="btn primary" onclick="editConstitutionUI()">编辑新版本</button></div><div id="wsConstEditor"></div><h4>章程版本历史</h4>${list.length?`<table class="table"><thead><tr><th>版本</th><th>状态</th><th>哈希</th><th>操作</th></tr></thead><tbody>${versions}</tbody></table>`:'<p class="muted">暂无版本</p>'}</section>`;
+}
+function editConstitutionUI(){
+  const cur=window._ws.ws.constitution;
+  const base=cur?JSON.stringify(cur.config,null,2):JSON.stringify({mission:'',in_scope:[],out_of_scope:[],allowed_tools:[]},null,2);
+  $('#wsConstEditor').innerHTML=`<form class="form" onsubmit="submitConstitutionDraft(event)" style="margin-top:10px"><label>新版本 config (JSON)<textarea id="constConfig" rows="10" class="json">${esc(base)}</textarea></label><div class="row"><button class="btn primary">创建草稿</button><button type="button" class="btn" onclick="$('#wsConstEditor').innerHTML=''">取消</button></div></form>`;
+}
+async function submitConstitutionDraft(e){
+  e.preventDefault();const tk=window._ws.tk;
+  let config;try{config=JSON.parse($('#constConfig').value)}catch(err){alert('JSON 解析失败：'+err.message);return}
+  try{await api(`/v1/teams/${tk}/constitution/draft`,{method:'POST',body:{config}});await refreshWsConstitution(tk)}catch(err){alert(err.message)}
+}
+async function refreshWsConstitution(tk){
+  try{const [ws,constitutions]=await Promise.all([api(`/v1/teams/${tk}/workspace`),api(`/v1/teams/${tk}/constitutions`).catch(()=>[])]);window._ws.ws=ws;window._ws.constitutions=constitutions;const el=$('#wsConstitution');if(el)el.outerHTML=wsConstitutionHTML()}catch(e){}
+}
+async function constitutionAction(id,action){
+  try{await api(`/v1/teams/constitution/${id}/${action}`,{method:'POST'});await refreshWsConstitution(window._ws.tk)}catch(err){alert(err.message)}
+}
+function wsMembersHTML(){
+  const members=window._ws.ws.members||[];
+  return `<section class="card"><h3 style="margin-top:0">长期成员 (AgentProfile)</h3>${members.length?`<table class="table"><thead><tr><th>角色</th><th>姓名</th><th>身份</th><th>状态</th></tr></thead><tbody>${members.map(m=>`<tr><td><span class="muted">${esc(m.role_key)}</span></td><td><strong>${esc(m.name)}</strong></td><td>${m.is_lead?'<span class="tag purple">主理人</span>':'<span class="tag">长期成员</span>'}</td><td>${tag(m.status)}</td></tr>`).join('')}</tbody></table>`:'<p class="muted">暂无成员</p>'}</section>`;
+}
+function wsMissionsHTML(){
+  const missions=window._ws.missions||[];
+  const filterBtns=`<div class="toolbar"><button class="btn sm ${workspaceMissionFilter==='active'?'primary':''}" onclick="setWsMissionFilter('active')">进行中</button><button class="btn sm ${workspaceMissionFilter==='all'?'primary':''}" onclick="setWsMissionFilter('all')">全部</button></div>`;
+  return `<section><h2 class="section">Mission 列表</h2>${filterBtns}${missions.length?`<div class="stack">${missions.map(m=>{const p=m.workitem_progress||{};const pct=p.total?Math.round(p.completed/p.total*100):0;const title=m.title||((m.objective||'').slice(0,40))||m.id;return `<article class="card click" onclick="openWsMission('${m.id}')"><div class="row between"><strong>${esc(title)}</strong>${tag(m.status)}</div><p class="muted">${esc((m.objective||'').slice(0,100))}</p><div class="row between"><span class="muted">WorkItem 进度：${p.completed}/${p.total}</span><div class="progress" style="width:120px"><span style="width:${pct}%"></span></div></div></article>`}).join('')}</div>`:'<div class="empty">暂无 Mission</div>'}</section>`;
+}
+async function setWsMissionFilter(f){
+  workspaceMissionFilter=f;
+  try{window._ws.missions=await api(`/v1/teams/${window._ws.tk}/missions?status_filter=${f}`);const m=$('#wsMissions');if(m)m.innerHTML=wsMissionsHTML()}catch(e){alert(e.message)}
+}
+function openWsMission(id){
+  if(workspaceExpandedMission===id){workspaceExpandedMission=null;const el=$('#wsMissionDetail');if(el)el.innerHTML='';return}
+  workspaceExpandedMission=id;renderWsMissionDetail(id);
+}
+function renderWsMissionDetail(id){
+  const el=$('#wsMissionDetail');if(!el)return;
+  el.innerHTML='<div class="empty">加载 Mission 详情…</div>';
+  api(`/v1/missions/${id}`).then(d=>{
+    if(workspaceExpandedMission!==id)return;
+    window._ws.missionDetail=d;
+    el.innerHTML=wsMissionDetailHTML(d);
+  }).catch(e=>{el.innerHTML=notice(esc(e.message),'error')});
+}
+function wsMissionDetailHTML(d){
+  const m=d.mission||{};const pm=window._ws.profileMap||{};const team=window._ws.team||{};
+  const leadName=(pm[m.lead_agent_profile_id]||{}).name||'未分配';
+  const items=d.work_items||[];const runs=d.agent_runs||[];
+  const itemsHTML=items.length?items.map(i=>{
+    const prof=pm[i.assigned_agent_profile_id]||{};
+    const itemRuns=runs.filter(r=>r.work_item_id===i.id);
+    const runsHTML=itemRuns.length?itemRuns.map(r=>{
+      const annot=r.context_cleared?'<span class="tag blue">上下文已清理，profile 复用</span>':'';
+      const runProfile=(pm[r.agent_profile_id]||{}).name||r.agent_profile_id;
+      return `<div class="workitem" style="margin:6px 0"><div class="row between"><span>执行实例 AgentRun</span>${tag(r.status)}</div><div class="muted" style="font-size:12px">${esc(runProfile)} · ${esc((r.id||'').slice(0,8))}</div>${r.context_cleared?`<div style="margin-top:4px">${annot}</div>`:''}${r.close_reason?`<div class="muted" style="font-size:12px">关闭原因：${esc(r.close_reason)}</div>`:''}</div>`;
+    }).join(''):'<p class="muted" style="font-size:12px">暂无执行实例</p>';
+    return `<div class="workitem"><div class="row between"><strong>${esc(i.title)}</strong>${tag(i.status)}</div><p class="muted" style="font-size:12px">${esc(i.objective)}</p><div class="muted" style="font-size:12px">子 agent（角色）：${prof.name?esc(prof.name)+' · '+esc(prof.role_key||''):'未分配 AgentProfile'}</div><div style="margin-top:6px"><div class="muted" style="font-size:12px;font-weight:600">执行实例：</div>${runsHTML}</div></div>`;
+  }).join(''):'<div class="empty">主理人尚未创建任务清单</div>';
+  const members=(team.agents||[]);
+  const memberStatusHTML=members.length?members.map(a=>{
+    const hasRunning=runs.some(r=>r.agent_profile_id===a.id&&r.status==='RUNNING');
+    return `<tr><td>${a.is_lead?'<span class="tag purple">主理人</span>':'<span class="tag">成员</span>'}</td><td><strong>${esc(a.name)}</strong><br><span class="muted">${esc(a.role_key)}</span></td><td>${hasRunning?'<span class="tag amber">执行中</span>':'<span class="tag green">当前空闲，可接受新任务</span>'}</td></tr>`;
+  }).join(''):'<tr><td colspan="3" class="muted">无成员</td></tr>';
+  return `<section class="card"><div class="row between"><div><div class="title">${esc(m.title||'')}</div><div class="muted" style="font-size:12px">Mission v${esc(m.version)} · Plan v${esc(m.plan_version)}</div></div><div>${tag(m.status)} ${tag(m.risk_level)}</div></div><p>${esc(m.objective||'')}</p><div class="muted">主理人：${esc(leadName)}</div><h4>主理人 → 子 agent（角色）→ 执行实例</h4><div class="stack">${itemsHTML}</div><h4>长期成员状态（本 Mission 范围）</h4><table class="table"><thead><tr><th>身份</th><th>成员</th><th>执行状态</th></tr></thead><tbody>${memberStatusHTML}</tbody></table><details><summary class="muted">成果与审批</summary><h5>成果</h5>${(d.artifacts||[]).length?d.artifacts.map(a=>`<div class="workitem"><strong>${esc(a.title)}</strong></div>`).join(''):'<p class="muted">无</p>'}<h5>审批</h5>${(d.approvals||[]).length?d.approvals.map(a=>`<div class="workitem">${tag(a.status)} <strong>${esc(a.decision_question)}</strong></div>`).join(''):'<p class="muted">无</p>'}</details></section>`;
+}
+function wsSkillsHTML(){
+  const skills=window._ws.ws.skills||[];
+  return `<section class="card" id="wsSkills"><h3 style="margin-top:0">可用 Skill</h3><div class="toolbar"><label class="btn">上传 Skill<input type="file" accept=".yaml,.yml,.json,.md,.txt" style="display:none" onchange="wsUploadSkill(this.files[0])"></label></div>${skills.length?`<table class="table"><thead><tr><th>Skill</th><th>版本</th><th>来源</th><th>状态</th></tr></thead><tbody>${skills.map(x=>{const dd=x.definition||{},r=x.release||{};return `<tr><td><strong>${esc(dd.name||'')}</strong><br><span class="muted">${esc(dd.skill_key||'')}</span></td><td>${esc(r.semantic_version||'')}</td><td>${r.uploaded_by_user?'用户':'平台'}</td><td>${tag(r.status||'')}</td></tr>`}).join('')}</tbody></table>`:'<p class="muted">暂无可用 Skill</p>'}</section>`;
+}
+async function wsUploadSkill(file){
+  if(!file)return;const fd=new FormData();fd.append('file',file);
+  try{await api('/v1/skills/upload',{method:'POST',body:fd});const ws=await api(`/v1/teams/${window._ws.tk}/workspace`);window._ws.ws=ws;const el=$('#wsSkills');if(el)el.outerHTML=wsSkillsHTML()}catch(e){alert(e.message)}
+}
+function wsCollabHTML(){
+  const collabs=window._ws.ws.collaborations||[];const teamId=(window._ws.team||{}).id;const teamIdMap=window._ws.teamIdMap||{};
+  return `<h2 class="section">协作请求 (CollaborationRequest)</h2>${collabs.length?`<div class="stack">${collabs.map(c=>{
+    const isSending=c.sending_team_id===teamId;const isReceiving=c.receiving_team_id===teamId;
+    const role=isSending?'发起':'接收';
+    const fromName=(teamIdMap[c.sending_team_id]||{}).name||c.sending_team_id;const toName=(teamIdMap[c.receiving_team_id]||{}).name||c.receiving_team_id;
+    let actions='';
+    if(isReceiving){
+      if(c.status==='PENDING')actions=`<button class="btn sm primary" onclick="collabAction('${c.id}','accept')">接受</button><button class="btn sm danger" onclick="collabAction('${c.id}','decline')">拒绝</button>`;
+      else if(c.status==='ACCEPTED')actions=`<button class="btn sm primary" onclick="collabAction('${c.id}','start')">启动工作</button>`;
+      else if(c.status==='IN_PROGRESS')actions=`<button class="btn sm primary" onclick="collabAction('${c.id}','complete')">完成并回传</button>`;
+    }else{actions='<span class="muted">只读（发起方）</span>'}
+    return `<article class="card"><div class="row between"><strong>${esc(c.objective)}</strong>${tag(c.status)}</div><p class="muted">本团角色：${role} · ${esc(fromName)} → ${esc(toName)}</p><p class="muted">期望成果：${esc(c.expected_artifact)}</p>${c.response_reason?`<p class="muted">回复说明：${esc(c.response_reason)}</p>`:''}<div class="actions">${actions}</div></article>`;
+  }).join('')}</div>`:'<div class="empty">暂无协作请求</div>'}`;
+}
+async function refreshWsCollab(){
+  try{const ws=await api(`/v1/teams/${window._ws.tk}/workspace`);window._ws.ws=ws;const el=$('#wsCollab');if(el)el.innerHTML=wsCollabHTML()}catch(e){}
+}
+function collabAction(id,action){
+  if(action==='decline'){showModal('拒绝协作请求',`<form class="form" onsubmit="doCollabDecline(event,'${id}')"><label>拒绝理由（必填）<textarea id="declineReason" required></textarea></label><button class="btn danger">确认拒绝</button></form>`);return}
+  if(action==='complete'){showModal('完成并回传协作',`<form class="form" onsubmit="doCollabComplete(event,'${id}')"><label>成果 Artifact ID（必填）<input id="artifactId" required placeholder="artifact uuid"></label><button class="btn primary">完成并回传</button></form>`);return}
+  api(`/v1/teams/${window._ws.tk}/collaborations/${id}/${action}`,{method:'POST'}).then(refreshWsCollab).catch(e=>alert(e.message));
+}
+async function doCollabDecline(e,id){e.preventDefault();try{await api(`/v1/teams/${window._ws.tk}/collaborations/${id}/decline`,{method:'POST',body:{reason:$('#declineReason').value}});modal.close();refreshWsCollab()}catch(err){alert(err.message)}}
+async function doCollabComplete(e,id){e.preventDefault();try{await api(`/v1/teams/${window._ws.tk}/collaborations/${id}/complete`,{method:'POST',body:{artifact_id:$('#artifactId').value}});modal.close();refreshWsCollab()}catch(err){alert(err.message)}}
+function wsMemoryHTML(){
+  const mem=window._ws.ws.memories||[];
+  return `<section class="card"><h3 style="margin-top:0">记忆 (MemoryRecord)</h3>${mem.length?`<table class="table"><thead><tr><th>类型</th><th>主题</th><th>状态</th><th>内容</th></tr></thead><tbody>${mem.map(x=>`<tr><td>${esc(x.memory_type)}</td><td>${esc(x.subject_key)}</td><td>${tag(x.status)}</td><td class="json">${esc(JSON.stringify(x.content)).slice(0,120)}</td></tr>`).join('')}</tbody></table>`:'<p class="muted">暂无记忆</p>'}</section>`;
+}
 </script></body></html>

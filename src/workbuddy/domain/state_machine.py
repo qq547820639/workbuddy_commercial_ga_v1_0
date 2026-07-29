@@ -83,6 +83,16 @@ class ExternalOperationStatus(StrEnum):
     CANCELLED = "CANCELLED"
 
 
+class CollaborationRequestStatus(StrEnum):
+    PENDING = "PENDING"
+    ACCEPTED = "ACCEPTED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    DECLINED = "DECLINED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+
+
 MISSION_TRANSITIONS: Mapping[MissionStatus, Set[MissionStatus]] = {
     MissionStatus.INGESTED: {MissionStatus.DISPATCH_REVIEW, MissionStatus.CANCELLED},
     MissionStatus.DISPATCH_REVIEW: {MissionStatus.ROUTED, MissionStatus.NEEDS_INFORMATION, MissionStatus.CANCELLED},
@@ -146,6 +156,13 @@ OPERATION_TRANSITIONS: Mapping[ExternalOperationStatus, Set[ExternalOperationSta
     ExternalOperationStatus.BLOCKED: set(), ExternalOperationStatus.FAILED: set(), ExternalOperationStatus.SUCCEEDED: set(), ExternalOperationStatus.CANCELLED: set(),
 }
 
+COLLABORATION_REQUEST_TRANSITIONS: Mapping[CollaborationRequestStatus, Set[CollaborationRequestStatus]] = {
+    CollaborationRequestStatus.PENDING: {CollaborationRequestStatus.ACCEPTED, CollaborationRequestStatus.DECLINED, CollaborationRequestStatus.CANCELLED},
+    CollaborationRequestStatus.ACCEPTED: {CollaborationRequestStatus.IN_PROGRESS, CollaborationRequestStatus.DECLINED},
+    CollaborationRequestStatus.IN_PROGRESS: {CollaborationRequestStatus.COMPLETED, CollaborationRequestStatus.FAILED, CollaborationRequestStatus.CANCELLED},
+    CollaborationRequestStatus.COMPLETED: set(), CollaborationRequestStatus.DECLINED: set(), CollaborationRequestStatus.FAILED: set(), CollaborationRequestStatus.CANCELLED: set(),
+}
+
 S = TypeVar("S", bound=StrEnum)
 
 
@@ -153,7 +170,21 @@ class InvalidTransition(ValueError):
     pass
 
 
-def transition(current: S, target: S, table: Mapping[S, Set[S]]) -> S:
+_TRANSITION_TABLES: Mapping[type, Mapping] = {
+    MissionStatus: MISSION_TRANSITIONS,
+    WorkItemStatus: WORK_ITEM_TRANSITIONS,
+    AgentRunStatus: AGENT_RUN_TRANSITIONS,
+    ApprovalStatus: APPROVAL_TRANSITIONS,
+    ExternalOperationStatus: OPERATION_TRANSITIONS,
+    CollaborationRequestStatus: COLLABORATION_REQUEST_TRANSITIONS,
+}
+
+
+def transition(current: S, target: S, table: Mapping[S, Set[S]] | None = None) -> S:
+    if table is None:
+        table = _TRANSITION_TABLES.get(type(current))
+        if table is None:
+            raise InvalidTransition(f"no transition table for {type(current).__name__}")
     if target not in table.get(current, set()):
         raise InvalidTransition(f"illegal transition: {current} -> {target}")
     return target

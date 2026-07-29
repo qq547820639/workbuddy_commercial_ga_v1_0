@@ -1,0 +1,22 @@
+schema_version: 1
+skill_key: hr-lead-triage
+semantic_version: 1.0.0
+name: HR 主理人任务分级
+purpose: 将已路由的 HR 邮件转换为结构化 Mission Brief，选择招聘或员工关系工作流并定义 WorkItem 依赖。
+allowed_roles: [hr_director]
+inputs: [mission, team_constitution, workflow_version, available_agent_profiles, published_skill_releases]
+outputs: [mission_brief, work_items, dependencies, approval_checkpoints, missing_information]
+procedure:
+  - 核验任务归属与输入完整性
+  - 选择一个标准 HR 工作流版本
+  - 定义目标、交付物、约束和完成标准
+  - 生成无循环依赖的 WorkItem
+  - 为每项工作绑定角色、Skill、证据和预算
+  - 插入章程要求的强制审批节点
+tools: []
+permissions: {data_scope: current_mission, external_write: false}
+quality_gates:
+  - 一个 Mission 只能有一个主责团队和主理人
+  - 每个 WorkItem 至少有一个验收标准
+  - 不得引用未发布 SkillRelease
+  - 依赖图不得有环

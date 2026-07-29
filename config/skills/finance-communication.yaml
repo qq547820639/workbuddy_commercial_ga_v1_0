@@ -1,0 +1,18 @@
+schema_version: 1
+skill_key: finance-communication
+semantic_version: 1.0.0
+name: 财务沟通回复
+purpose: 生成诚实说明已知、未知、行动和下一更新时间的财务对外或内部回复草稿。
+allowed_roles: [finance_communicator]
+inputs: [triage_result, processing_result]
+outputs: [finance_draft, approval_items]
+procedure:
+  - 承认已知信息
+  - 说明正在采取的行动
+  - 不虚构未确认的数字或承诺
+  - 标记付款执行和预算外支出等需审批事项
+tools: []
+permissions: {data_scope: current_mission, external_write: false}
+quality_gates:
+  - 实际付款必须审批
+  - 不得承诺未验证的付款日期或金额

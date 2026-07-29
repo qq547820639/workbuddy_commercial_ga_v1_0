@@ -1,0 +1,18 @@
+schema_version: 1
+skill_key: hr-candidate-screening
+semantic_version: 1.0.0
+name: 招聘候选人筛选
+purpose: 基于当前授权材料评估候选人资质与岗位匹配度，输出可解释的筛选结论。
+allowed_roles: [recruiter]
+inputs: [mission_context, candidate_profile, job_requirement]
+outputs: [match_score, match_factors, evidence, missing_information]
+procedure:
+  - 读取候选人邮件与授权资料
+  - 提取岗位关键要求
+  - 区分可验证事实与推断
+  - 输出匹配因素和缺失数据
+tools: []
+permissions: {data_scope: current_mission, external_write: false}
+quality_gates:
+  - 筛选结论必须有候选人原话或资料来源
+  - 不推断未提供的经历或能力

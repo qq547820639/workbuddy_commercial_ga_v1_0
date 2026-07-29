@@ -4,7 +4,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from workbuddy.db.models import (
-    AgentRun, MailMessage, Mission, SkillRelease, ToolCall, ToolDefinition, ToolGrant,
+    AgentRun, MailMessage, Mission, SkillRelease, TeamConstitutionVersion, ToolCall,
+    ToolDefinition, ToolGrant,
 )
 from workbuddy.domain.state_machine import AgentRunStatus
 from .audit import append_audit
@@ -18,6 +19,12 @@ class ToolPolicyError(ValueError):
 def create_run_grants(session: Session, run: AgentRun) -> list[ToolGrant]:
     skill = session.get(SkillRelease, run.skill_release_id)
     tool_keys = (skill.config if skill else {}).get("tools", [])
+    mission = session.get(Mission, run.mission_id)
+    constitution = session.get(TeamConstitutionVersion, mission.constitution_version_id) if mission and mission.constitution_version_id else None
+    allowed_tools = (constitution.config if constitution else {}).get("allowed_tools")
+    if allowed_tools is not None:
+        allowed_set = set(allowed_tools)
+        tool_keys = [k for k in tool_keys if k in allowed_set]
     grants: list[ToolGrant] = []
     for key in tool_keys:
         tool = session.scalar(select(ToolDefinition).where(ToolDefinition.tenant_id == run.tenant_id, ToolDefinition.tool_key == key))

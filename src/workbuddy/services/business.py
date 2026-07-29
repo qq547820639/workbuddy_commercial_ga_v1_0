@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from typing import Any
 from uuid import uuid4
 
 from sqlalchemy import delete, func, select
@@ -8,13 +9,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from workbuddy.db.models import (
-    AgentProfile, AgentRun, ApprovalDecision, ApprovalRequest, Artifact, DispatchDecision, DispatchFeedback,
+    AgentProfile, AgentRun, ApprovalDecision, ApprovalRequest, Artifact, CollaborationRequest, DispatchDecision, DispatchFeedback,
     Evidence, MailMessage, Mission, TeamConstitutionVersion, TeamDefinition, ToolGrant,
     WorkItem, WorkItemDependency, WorkflowVersion,
 )
 from workbuddy.domain.state_machine import (
-    AGENT_RUN_TRANSITIONS, APPROVAL_TRANSITIONS, MISSION_TRANSITIONS,
-    WORK_ITEM_TRANSITIONS, AgentRunStatus, ApprovalStatus,
+    AGENT_RUN_TRANSITIONS, APPROVAL_TRANSITIONS, COLLABORATION_REQUEST_TRANSITIONS, MISSION_TRANSITIONS,
+    WORK_ITEM_TRANSITIONS, AgentRunStatus, ApprovalStatus, CollaborationRequestStatus,
     MissionStatus, WorkItemStatus, transition,
 )
 from .audit import append_audit
@@ -62,6 +63,45 @@ def _run_transition(session: Session, run: AgentRun, target: AgentRunStatus, act
                  action=f"agent_run.{target.value.lower()}", aggregate_type="agent_run",
                  aggregate_id=run.id, aggregate_version=run.version, payload={"from": current.value, "to": target.value, "reason": reason})
     return run
+
+
+def _collaboration_transition(session: Session, request: CollaborationRequest, target: CollaborationRequestStatus, actor: str, reason: str) -> CollaborationRequest:
+    current = CollaborationRequestStatus(request.status)
+    request.status = transition(current, target, COLLABORATION_REQUEST_TRANSITIONS).value
+    append_audit(session, tenant_id=request.tenant_id, actor_type="agent" if actor.startswith("agent:") else "service",
+                 actor_id=actor, action=f"collaboration.{target.value.lower()}", aggregate_type="collaboration_request",
+                 aggregate_id=request.id, payload={"from": current.value, "to": target.value, "reason": reason})
+    return request
+
+
+def _get_collaboration(session: Session, collaboration_id: str) -> CollaborationRequest:
+    request = session.scalar(select(CollaborationRequest).where(CollaborationRequest.id == collaboration_id))
+    if not request:
+        raise BusinessError("collaboration request not found")
+    return request
+
+
+_SUPPORTING_TEAMS_PREFIX = "__supporting_teams__:"
+
+
+def _extract_supporting_team_keys(decision: DispatchDecision) -> list[str]:
+    """Recover LLM-provided supporting team keys encoded into DispatchDecision.reasons.
+
+    The DispatchDecision schema has no dedicated column for supporting_team_keys, so the
+    keys are persisted as a single structured marker entry appended to ``reasons`` and
+    stripped back out when confirm_dispatch consumes them.
+    """
+    keys: list[str] = []
+    remaining: list[str] = []
+    for reason in decision.reasons or []:
+        if isinstance(reason, str) and reason.startswith(_SUPPORTING_TEAMS_PREFIX):
+            raw = reason[len(_SUPPORTING_TEAMS_PREFIX):]
+            keys.extend(k for k in raw.split(",") if k)
+        else:
+            remaining.append(reason)
+    if keys:
+        decision.reasons = remaining
+    return keys
 
 
 def _mail_datetime(value) -> datetime:
@@ -138,12 +178,18 @@ def create_dispatch(session: Session, tenant_id: str, mail_id: str) -> DispatchD
     if existing:
         return existing
     proposal = propose_dispatch(session, tenant_id, message)
+    reasons = list(proposal["reasons"])
+    supporting_keys = list(proposal.get("supporting_team_keys", []))
+    if supporting_keys:
+        # Persist supporting team keys alongside reasons so confirm_dispatch can auto-open
+        # collaboration requests without re-invoking the model. See _extract_supporting_team_keys.
+        reasons.append(f"{_SUPPORTING_TEAMS_PREFIX}{','.join(supporting_keys)}")
     decision = DispatchDecision(
         tenant_id=tenant_id, mail_message_id=message.id,
         suggested_team_id=proposal["team"].id,
         suggested_workflow_id=proposal["workflow"].id if proposal["workflow"] else None,
         business_type=proposal["business_type"], risk_level=proposal["risk_level"],
-        confidence=proposal["confidence"], reasons=proposal["reasons"],
+        confidence=proposal["confidence"], reasons=reasons,
         missing_information=proposal["missing_information"], status="PROPOSED",
         model_invocation_id=proposal.get("model_invocation_id"), review_required=proposal.get("review_required", True),
     )
@@ -188,8 +234,51 @@ def confirm_dispatch(session: Session, tenant_id: str, decision_id: str, team_ke
     _mission_transition(session, mission, MissionStatus.ROUTED, actor, "任务进入专家团主理人队列")
     decision.status = "CONFIRMED"; decision.confirmed_team_id = team.id; decision.confirmed_workflow_id = workflow.id if workflow else None
     session.add(DispatchFeedback(tenant_id=tenant_id, dispatch_decision_id=decision.id, suggested_team_id=decision.suggested_team_id, confirmed_team_id=team.id, suggested_risk_level=decision.risk_level, corrected_risk_level=None, actor_id=actor, comment="owner confirmed or corrected shadow routing"))
+    _auto_create_collaboration_requests(session, tenant_id, mission, team, decision, actor)
     message.processing_status = "ROUTED"
     return mission
+
+
+def _auto_create_collaboration_requests(session: Session, tenant_id: str, mission: Mission, primary_team: TeamDefinition, decision: DispatchDecision, actor: str) -> list[CollaborationRequest]:
+    """Open a PENDING CollaborationRequest toward each supporting team the LLM identified.
+
+    Supporting team keys are recovered from the structured marker persisted in
+    ``DispatchDecision.reasons`` (see ``create_dispatch``). Requests are idempotent: a
+    pre-existing PENDING request for the same mission + receiving team is reused so that
+    re-confirming a dispatch does not duplicate collaboration work.
+    """
+    supporting_team_keys = _extract_supporting_team_keys(decision)
+    if not supporting_team_keys:
+        return []
+    created: list[CollaborationRequest] = []
+    for team_key in supporting_team_keys:
+        supporting_team = session.scalar(select(TeamDefinition).where(
+            TeamDefinition.tenant_id == tenant_id, TeamDefinition.team_key == team_key,
+        ))
+        if not supporting_team or supporting_team.id == primary_team.id:
+            continue
+        existing = session.scalar(select(CollaborationRequest).where(
+            CollaborationRequest.mission_id == mission.id,
+            CollaborationRequest.receiving_team_id == supporting_team.id,
+            CollaborationRequest.status == CollaborationRequestStatus.PENDING.value,
+        ))
+        if existing:
+            created.append(existing)
+            continue
+        request = CollaborationRequest(
+            tenant_id=tenant_id, mission_id=mission.id,
+            sending_team_id=primary_team.id, receiving_team_id=supporting_team.id,
+            objective=f"协助处理 {decision.business_type} 相关子任务",
+            input_scope={"source_mission_id": mission.id, "business_type": decision.business_type, "dispatch_decision_id": decision.id},
+            expected_artifact="支持团队的调查结果或交付物",
+            status=CollaborationRequestStatus.PENDING.value,
+        )
+        session.add(request); session.flush()
+        append_audit(session, tenant_id=tenant_id, actor_type="service", actor_id="dispatcher",
+                     action="collaboration.auto_requested", aggregate_type="collaboration_request", aggregate_id=request.id,
+                     payload={"mission_id": mission.id, "sending_team_id": primary_team.id, "receiving_team_id": supporting_team.id, "team_key": team_key})
+        created.append(request)
+    return created
 
 
 def accept_mission(session: Session, tenant_id: str, mission_id: str, expected_version: int, actor: str = "lead") -> Mission:
@@ -403,3 +492,165 @@ def _get_work_item(session: Session, tenant_id: str, item_id: str) -> WorkItem:
 
 def _version(current: int, expected: int) -> None:
     if current != expected: raise ConflictError(f"version conflict: current={current}, expected={expected}")
+
+
+# ---------------------------------------------------------------------------
+# Cross-team collaboration lifecycle (dispatch → accept → execute → artifact)
+# ---------------------------------------------------------------------------
+
+def accept_collaboration(session: Session, collaboration_id: str, actor_id: str) -> CollaborationRequest:
+    request = _get_collaboration(session, collaboration_id)
+    if request.status != CollaborationRequestStatus.PENDING.value:
+        raise BusinessError(f"collaboration request cannot be accepted from {request.status}")
+    _collaboration_transition(session, request, CollaborationRequestStatus.ACCEPTED, actor_id, "接收团队接受协作请求")
+    return request
+
+
+def decline_collaboration(session: Session, collaboration_id: str, actor_id: str, reason: str) -> CollaborationRequest:
+    request = _get_collaboration(session, collaboration_id)
+    if request.status not in {CollaborationRequestStatus.PENDING.value, CollaborationRequestStatus.ACCEPTED.value}:
+        raise BusinessError(f"collaboration request cannot be declined from {request.status}")
+    _collaboration_transition(session, request, CollaborationRequestStatus.DECLINED, actor_id, reason)
+    request.response_reason = reason
+    return request
+
+
+def start_collaboration_work(session: Session, collaboration_id: str) -> CollaborationRequest:
+    request = _get_collaboration(session, collaboration_id)
+    if request.status != CollaborationRequestStatus.ACCEPTED.value:
+        raise BusinessError(f"collaboration request cannot start from {request.status}")
+    _collaboration_transition(session, request, CollaborationRequestStatus.IN_PROGRESS, "service", "接收团队开始执行协作子任务")
+    return request
+
+
+def complete_collaboration_with_artifact(session: Session, collaboration_id: str, artifact_id: str, actor_id: str) -> CollaborationRequest:
+    request = _get_collaboration(session, collaboration_id)
+    if request.status != CollaborationRequestStatus.IN_PROGRESS.value:
+        raise BusinessError(f"collaboration request cannot be completed from {request.status}")
+    artifact = session.scalar(select(Artifact).where(
+        Artifact.id == artifact_id, Artifact.tenant_id == request.tenant_id, Artifact.mission_id == request.mission_id,
+    ))
+    if not artifact:
+        raise BusinessError("artifact not found in collaboration mission scope")
+    _collaboration_transition(session, request, CollaborationRequestStatus.COMPLETED, actor_id, "接收团队回传协作 Artifact")
+    response = dict(request.response or {})
+    response.update({
+        "artifact_id": artifact.id,
+        "artifact_title": artifact.title,
+        "artifact_type": artifact.artifact_type,
+    })
+    request.response = response
+    request.response_reason = "协作完成并已回传 Artifact"
+    return request
+
+
+def get_collaboration_artifacts(session: Session, mission_id: str) -> list[dict[str, Any]]:
+    """Return completed collaboration requests and their linked artifacts for a mission.
+
+    The primary team's lead can use this to manually reference supporting-team deliverables
+    when planning downstream WorkItems (e.g. by recording the collaboration_id and
+    artifact_id in WorkItem.input_snapshot or Evidence).
+    """
+    requests = session.scalars(select(CollaborationRequest).where(
+        CollaborationRequest.mission_id == mission_id,
+        CollaborationRequest.status == CollaborationRequestStatus.COMPLETED.value,
+    ).order_by(CollaborationRequest.updated_at.desc())).all()
+    result: list[dict[str, Any]] = []
+    for req in requests:
+        artifact_id = (req.response or {}).get("artifact_id") if req.response else None
+        artifact = session.get(Artifact, artifact_id) if artifact_id else None
+        result.append({
+            "collaboration_id": req.id,
+            "sending_team_id": req.sending_team_id,
+            "receiving_team_id": req.receiving_team_id,
+            "objective": req.objective,
+            "expected_artifact": req.expected_artifact,
+            "status": req.status,
+            "artifact_id": artifact_id,
+            "artifact": model_dict(artifact) if artifact else None,
+        })
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Team constitution version lifecycle (draft → reviewing → approved → published)
+# ---------------------------------------------------------------------------
+
+# Inlined transitions: state_machine.py does not yet define a ConstitutionStatus
+# machine, so legal transitions are validated here. A published version keeps its
+# status forever; publishing a newer version simply supersedes it as the team's
+# current charter (see confirm_dispatch, which resolves the max published version).
+CONSTITUTION_TRANSITIONS: dict[str, set[str]] = {
+    "draft": {"reviewing"},
+    "reviewing": {"approved"},
+    "approved": {"published"},
+    "published": set(),
+}
+
+
+def _get_constitution(session: Session, constitution_version_id: str) -> TeamConstitutionVersion:
+    constitution = session.get(TeamConstitutionVersion, constitution_version_id)
+    if not constitution:
+        raise BusinessError("constitution version not found")
+    return constitution
+
+
+def _constitution_transition(session: Session, constitution: TeamConstitutionVersion, target: str, actor: str, reason: str) -> TeamConstitutionVersion:
+    current = constitution.status
+    if target not in CONSTITUTION_TRANSITIONS.get(current, set()):
+        raise BusinessError(f"constitution cannot transition from {current} to {target}")
+    constitution.status = target
+    append_audit(session, tenant_id=constitution.tenant_id,
+                 actor_type="user" if actor == "owner" else "service",
+                 actor_id=actor, action=f"constitution.{target}", aggregate_type="team_constitution_version",
+                 aggregate_id=constitution.id, aggregate_version=constitution.version,
+                 payload={"from": current, "to": target, "reason": reason})
+    return constitution
+
+
+def create_constitution_draft(session: Session, team_id: str, config: dict[str, Any], actor_id: str) -> TeamConstitutionVersion:
+    """Create a new draft constitution version for a team.
+
+    The version number is computed as the team's current max version + 1. Existing
+    published versions are left untouched; the draft only becomes the team's current
+    charter once it reaches ``published`` and a newer Mission resolves it via
+    ``confirm_dispatch``.
+    """
+    team = session.get(TeamDefinition, team_id)
+    if not team:
+        raise BusinessError("team not found")
+    max_version = session.scalar(select(func.coalesce(func.max(TeamConstitutionVersion.version), 0)).where(TeamConstitutionVersion.team_id == team_id))
+    new_version = int(max_version) + 1
+    draft = TeamConstitutionVersion(
+        tenant_id=team.tenant_id, team_id=team_id, version=new_version,
+        status="draft", config=config, content_hash=content_hash(config),
+    )
+    session.add(draft); session.flush()
+    append_audit(session, tenant_id=team.tenant_id,
+                 actor_type="user" if actor_id == "owner" else "service",
+                 actor_id=actor_id, action="constitution.draft_created", aggregate_type="team_constitution_version",
+                 aggregate_id=draft.id, aggregate_version=draft.version,
+                 payload={"team_id": team_id, "version": new_version})
+    return draft
+
+
+def submit_constitution_for_review(session: Session, constitution_version_id: str, actor_id: str) -> TeamConstitutionVersion:
+    constitution = _get_constitution(session, constitution_version_id)
+    return _constitution_transition(session, constitution, "reviewing", actor_id, "提交章程版本进入审核")
+
+
+def approve_constitution(session: Session, constitution_version_id: str, actor_id: str) -> TeamConstitutionVersion:
+    constitution = _get_constitution(session, constitution_version_id)
+    return _constitution_transition(session, constitution, "approved", actor_id, "审核通过章程版本")
+
+
+def publish_constitution(session: Session, constitution_version_id: str, actor_id: str) -> TeamConstitutionVersion:
+    """Promote an approved constitution version to published.
+
+    The newly published version becomes the team's current charter: subsequent
+    Missions resolve it via ``confirm_dispatch`` (max published version). The previous
+    published version keeps its status and remains bound to in-flight Missions via
+    ``Mission.constitution_version_id`` — it is never rewritten here.
+    """
+    constitution = _get_constitution(session, constitution_version_id)
+    return _constitution_transition(session, constitution, "published", actor_id, "发布章程版本成为团队当前生效章程")

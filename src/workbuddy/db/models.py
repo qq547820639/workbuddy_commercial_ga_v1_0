@@ -419,8 +419,10 @@ class CollaborationRequest(Base, TimestampMixin):
     objective: Mapped[str] = mapped_column(Text, nullable=False)
     input_scope: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     expected_artifact: Mapped[str] = mapped_column(String(200), nullable=False)
-    status: Mapped[str] = mapped_column(String(30), default="REQUESTED", nullable=False)
+    # legal values: see CollaborationRequestStatus in workbuddy.domain.state_machine
+    status: Mapped[str] = mapped_column(String(30), default="PENDING", nullable=False)
     response: Mapped[dict[str, Any] | None] = mapped_column(JSON, nullable=True)
+    response_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
 
 
 class MemoryRecord(Base, TimestampMixin):

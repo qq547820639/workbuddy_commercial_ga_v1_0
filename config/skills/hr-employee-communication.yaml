@@ -1,0 +1,18 @@
+schema_version: 1
+skill_key: hr-employee-communication
+semantic_version: 1.0.0
+name: HR 沟通回复
+purpose: 生成诚实说明已知、未知、行动和下一更新时间的 HR 对外回复草稿。
+allowed_roles: [hr_communicator]
+inputs: [triage_result, screening_or_investigation_result]
+outputs: [hr_draft, approval_items]
+procedure:
+  - 承认已知信息
+  - 说明正在采取的行动
+  - 不虚构未确认的政策或承诺
+  - 标记薪资调整、处分和解雇等需审批事项
+tools: []
+permissions: {data_scope: current_mission, external_write: false}
+quality_gates:
+  - 薪资调整和正式处分必须审批
+  - 不得承诺未验证的入职或离职日期

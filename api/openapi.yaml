@@ -3556,6 +3556,387 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
+  /v1/teams/{team_key}/dashboard:
+    get:
+      tags:
+      - expert-team-workspace
+      summary: Team Dashboard
+      operationId: team_dashboard_v1_teams__team_key__dashboard_get
+      parameters:
+      - name: team_key
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Team Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/teams/{team_key}/workspace:
+    get:
+      tags:
+      - expert-team-workspace
+      summary: Team Workspace
+      operationId: team_workspace_v1_teams__team_key__workspace_get
+      parameters:
+      - name: team_key
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Team Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/teams/{team_key}/missions:
+    get:
+      tags:
+      - expert-team-workspace
+      summary: Team Missions
+      operationId: team_missions_v1_teams__team_key__missions_get
+      parameters:
+      - name: team_key
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Team Key
+      - name: status_filter
+        in: query
+        required: false
+        schema:
+          type: string
+          default: active
+          title: Status Filter
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/teams/{team_key}/collaborations:
+    get:
+      tags:
+      - expert-team-workspace
+      summary: Team Collaborations
+      operationId: team_collaborations_v1_teams__team_key__collaborations_get
+      parameters:
+      - name: team_key
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Team Key
+      - name: role
+        in: query
+        required: false
+        schema:
+          type: string
+          default: all
+          title: Role
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/teams/{team_key}/collaborations/{collaboration_id}/accept:
+    post:
+      tags:
+      - expert-team-workspace
+      summary: Collaboration Accept
+      operationId: collaboration_accept_v1_teams__team_key__collaborations__collaboration_id__accept_post
+      parameters:
+      - name: team_key
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Team Key
+      - name: collaboration_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Collaboration Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/teams/{team_key}/collaborations/{collaboration_id}/decline:
+    post:
+      tags:
+      - expert-team-workspace
+      summary: Collaboration Decline
+      operationId: collaboration_decline_v1_teams__team_key__collaborations__collaboration_id__decline_post
+      parameters:
+      - name: team_key
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Team Key
+      - name: collaboration_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Collaboration Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollaborationDeclineIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/teams/{team_key}/collaborations/{collaboration_id}/start:
+    post:
+      tags:
+      - expert-team-workspace
+      summary: Collaboration Start
+      operationId: collaboration_start_v1_teams__team_key__collaborations__collaboration_id__start_post
+      parameters:
+      - name: team_key
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Team Key
+      - name: collaboration_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Collaboration Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/teams/{team_key}/collaborations/{collaboration_id}/complete:
+    post:
+      tags:
+      - expert-team-workspace
+      summary: Collaboration Complete
+      operationId: collaboration_complete_v1_teams__team_key__collaborations__collaboration_id__complete_post
+      parameters:
+      - name: team_key
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Team Key
+      - name: collaboration_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Collaboration Id
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollaborationCompleteIn'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/teams/{team_key}/constitution/draft:
+    post:
+      tags:
+      - expert-team-workspace
+      summary: Constitution Draft
+      operationId: constitution_draft_v1_teams__team_key__constitution_draft_post
+      parameters:
+      - name: team_key
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Team Key
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConstitutionDraftIn'
+      responses:
+        '201':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/teams/constitution/{constitution_version_id}/submit-review:
+    post:
+      tags:
+      - expert-team-workspace
+      summary: Constitution Submit Review
+      operationId: constitution_submit_review_v1_teams_constitution__constitution_version_id__submit_review_post
+      parameters:
+      - name: constitution_version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Constitution Version Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/teams/constitution/{constitution_version_id}/approve:
+    post:
+      tags:
+      - expert-team-workspace
+      summary: Constitution Approve
+      operationId: constitution_approve_v1_teams_constitution__constitution_version_id__approve_post
+      parameters:
+      - name: constitution_version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Constitution Version Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/teams/constitution/{constitution_version_id}/publish:
+    post:
+      tags:
+      - expert-team-workspace
+      summary: Constitution Publish
+      operationId: constitution_publish_v1_teams_constitution__constitution_version_id__publish_post
+      parameters:
+      - name: constitution_version_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Constitution Version Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+  /v1/teams/{team_key}/constitutions:
+    get:
+      tags:
+      - expert-team-workspace
+      summary: Team Constitutions
+      operationId: team_constitutions_v1_teams__team_key__constitutions_get
+      parameters:
+      - name: team_key
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Team Key
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
 components:
   schemas:
     AgentExecuteIn:
@@ -3682,6 +4063,28 @@ components:
       required:
       - updates
       title: ChecklistIn
+    CollaborationCompleteIn:
+      properties:
+        artifact_id:
+          type: string
+          title: Artifact Id
+      additionalProperties: false
+      type: object
+      required:
+      - artifact_id
+      title: CollaborationCompleteIn
+    CollaborationDeclineIn:
+      properties:
+        reason:
+          type: string
+          maxLength: 2000
+          minLength: 1
+          title: Reason
+      additionalProperties: false
+      type: object
+      required:
+      - reason
+      title: CollaborationDeclineIn
     CollaborationIn:
       properties:
         receiving_team_key:
@@ -3756,6 +4159,17 @@ components:
       - version
       - content_hash
       title: ComplianceIn
+    ConstitutionDraftIn:
+      properties:
+        config:
+          additionalProperties: true
+          type: object
+          title: Config
+      additionalProperties: false
+      type: object
+      required:
+      - config
+      title: ConstitutionDraftIn
     ControlIn:
       properties:
         scope_type:

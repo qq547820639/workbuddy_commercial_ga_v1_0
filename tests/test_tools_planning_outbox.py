@@ -1,8 +1,18 @@
 from __future__ import annotations
 
+import pytest
 from sqlalchemy import select
-from workbuddy.db.models import Mission, OutboxEvent
+from workbuddy.db.models import (
+    AgentProfile, AgentRun, Mission, OutboxEvent, SkillDefinition, SkillRelease,
+    TeamConstitutionVersion, TeamDefinition, ToolDefinition, WorkItem,
+)
+from workbuddy.domain.state_machine import AgentRunStatus
+from workbuddy.services.common import content_hash
 from workbuddy.services.outbox import publish_batch
+from workbuddy.services.tools import ToolPolicyError, create_run_grants, invoke_tool
+
+
+TENANT_ID = "00000000-0000-0000-0000-000000000001"
 
 
 def h(): return {"X-Tenant-ID": "00000000-0000-0000-0000-000000000001", "X-Actor-ID": "owner"}
@@ -56,3 +66,70 @@ def test_outbox_failure_can_be_replayed(client):
         assert pending
         second = publish_batch(session, tenant_id=h()["X-Tenant-ID"])
         assert second["published"] >= 1
+
+
+def _build_whitelist_run(session, constitution_config):
+    team = TeamDefinition(tenant_id=TENANT_ID, team_key="tools_whitelist_team", name="Tools Whitelist Team")
+    session.add(team); session.flush()
+    constitution = TeamConstitutionVersion(
+        tenant_id=TENANT_ID, team_id=team.id, version=1, status="published",
+        config=constitution_config, content_hash=content_hash(constitution_config),
+    )
+    session.add(constitution); session.flush()
+    for key, caps in [("mail.read", ["read"]), ("mail.send", ["send"])]:
+        session.add(ToolDefinition(tenant_id=TENANT_ID, tool_key=key, name=key, risk_level="low", capabilities=caps))
+    session.flush()
+    skill_def = SkillDefinition(tenant_id=TENANT_ID, skill_key="whitelist-test-skill", name="Whitelist Test Skill")
+    session.add(skill_def); session.flush()
+    skill_cfg = {"name": "Whitelist Test Skill", "tools": ["mail.read", "mail.send"]}
+    skill = SkillRelease(
+        tenant_id=TENANT_ID, skill_id=skill_def.id, semantic_version="1.0.0",
+        status="published", config=skill_cfg, content_hash=content_hash(skill_cfg),
+    )
+    session.add(skill); session.flush()
+    profile = AgentProfile(tenant_id=TENANT_ID, team_id=team.id, role_key="whitelist_tester", name="Whitelist Tester")
+    session.add(profile); session.flush()
+    mission = Mission(
+        tenant_id=TENANT_ID, source_type="manual", source_id="whitelist-test",
+        title="whitelist test", objective="verify team-level tool whitelist",
+        primary_team_id=team.id, constitution_version_id=constitution.id,
+    )
+    session.add(mission); session.flush()
+    item = WorkItem(
+        tenant_id=TENANT_ID, mission_id=mission.id, item_key="whitelist_step",
+        title="whitelist step", objective="step", skill_release_id=skill.id,
+    )
+    session.add(item); session.flush()
+    run = AgentRun(
+        tenant_id=TENANT_ID, mission_id=mission.id, work_item_id=item.id,
+        agent_profile_id=profile.id, skill_release_id=skill.id,
+        status=AgentRunStatus.RUNNING.value, data_scope="current_mission",
+    )
+    session.add(run); session.flush()
+    return run
+
+
+def test_team_allowed_tools_restricts_skill_tools(client):
+    constitution_cfg = {"team_key": "tools_whitelist_team", "name": "Tools Whitelist Team", "allowed_tools": ["mail.read"]}
+    with client.app.state.SessionLocal() as session:
+        run = _build_whitelist_run(session, constitution_cfg)
+        grants = create_run_grants(session, run)
+        session.flush()
+        granted_keys = {t.tool_key for t in session.scalars(
+            select(ToolDefinition).where(ToolDefinition.id.in_([g.tool_id for g in grants]))
+        ).all()}
+        assert granted_keys == {"mail.read"}
+        with pytest.raises(ToolPolicyError):
+            invoke_tool(session, TENANT_ID, run.id, "mail.send", "send", {})
+
+
+def test_team_without_allowed_tools_keeps_full_skill_tools(client):
+    constitution_cfg = {"team_key": "tools_whitelist_team", "name": "Tools Whitelist Team"}
+    with client.app.state.SessionLocal() as session:
+        run = _build_whitelist_run(session, constitution_cfg)
+        grants = create_run_grants(session, run)
+        session.flush()
+        granted_keys = {t.tool_key for t in session.scalars(
+            select(ToolDefinition).where(ToolDefinition.id.in_([g.tool_id for g in grants]))
+        ).all()}
+        assert granted_keys == {"mail.read", "mail.send"}

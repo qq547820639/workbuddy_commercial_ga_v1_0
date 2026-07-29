@@ -1,0 +1,20 @@
+schema_version: 1
+skill_key: finance-ap-processing
+semantic_version: 1.0.0
+name: 应付账款处理
+purpose: 基于当前授权材料处理付款申请与报销，输出有来源的付款核对结论并标记审批节点。
+allowed_roles: [ap_specialist]
+inputs: [mission_context, payment_request, budget_record]
+outputs: [ap_summary, payment_detail, approval_items, evidence]
+procedure:
+  - 读取付款申请邮件与授权预算资料
+  - 提取付款金额、用途与收款方
+  - 区分可验证数字与推断
+  - 标记实际付款与预算外支出审批节点
+  - 输出付款核对结论和缺失数据
+tools: []
+permissions: {data_scope: current_mission, external_write: false}
+quality_gates:
+  - 关键数字必须有来源
+  - 未审批付款不执行
+  - 无来源商业数字不得进入结论

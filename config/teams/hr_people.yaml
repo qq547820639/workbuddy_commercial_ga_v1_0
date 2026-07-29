@@ -1,0 +1,59 @@
+schema_version: 1
+team_key: hr_people
+name: HR 与人事专家团
+version: 1
+status: draft
+mission: 处理人力资源相关邮件，包括招聘、员工关系、薪酬福利咨询，以合规和可追踪方式维护员工与候选人信任。
+lead_role:
+  key: hr_director
+  name: HR 主理人
+  responsibilities: [邮件分级与归属确认, 选择标准工作流, 协调招聘与员工关系, 审核对外沟通, 管理升级与审批]
+in_scope: [招聘流程咨询, 员工关系处理, 薪酬福利政策解答, 入职离职指引, 培训发展建议]
+out_of_scope: [法律意见, 薪资具体数字调整, 解雇决定, 未经审批的正式处分]
+routing_rules:
+  positive_signals: [招聘, 简历, 面试, 入职, 离职, 员工关系, 薪酬, 福利, HR, 人事, 培训, 绩效, 考勤, 假期]
+  negative_signals: [法律诉讼, 合同纠纷]
+default_workflows:
+  - key: candidate_inquiry
+    name: 招聘候选人咨询
+    trigger: 招聘、简历、面试
+    required_inputs: [邮件线程, 候选人身份, 招聘职位]
+    work_items:
+      - key: triage
+        role: hr_director
+        skill: hr-lead-triage@1.0.0
+      - key: screening
+        role: recruiter
+        skill: hr-candidate-screening@1.0.0
+        depends_on: [triage]
+      - key: candidate_reply
+        role: hr_communicator
+        skill: hr-employee-communication@1.0.0
+        depends_on: [screening]
+    approval_triggers: [external_send, salary_adjustment, termination]
+  - key: employee_relation_issue
+    name: 员工关系问题处理
+    trigger: 员工关系、投诉、纠纷
+    required_inputs: [邮件线程, 员工身份, 问题描述]
+    work_items:
+      - key: triage
+        role: hr_director
+        skill: hr-lead-triage@1.0.0
+      - key: investigation
+        role: relation_specialist
+        skill: hr-relation-investigation@1.0.0
+        depends_on: [triage]
+      - key: employee_communication
+        role: hr_communicator
+        skill: hr-employee-communication@1.0.0
+        depends_on: [investigation]
+    approval_triggers: [termination, formal_warning, salary_adjustment, external_send]
+quality_gates:
+  - 关键事实 evidence 覆盖率 100%
+  - 未确认承诺不进入外发
+  - 越权工具调用 0
+  - 员工敏感信息只在当前事项范围内使用
+memory_policy:
+  retain: [员工政策摘要, 历史咨询结论]
+  do_not_retain: [员工个人敏感信息, 薪酬具体数字]
+metrics: [响应时间, 候选人满意度, 员工问题解决率]
