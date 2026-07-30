@@ -27,14 +27,14 @@ from workbuddy.services.audit import append_audit, verify_audit_chain
 from workbuddy.services.business import (
     BusinessError, ConflictError, accept_mission, approve_plan, confirm_dispatch, create_dispatch,
     decide_approval, ingest_mail, lead_review_mission, plan_mission,
-    review_work_item, start_execution, start_work_item, submit_agent_run,
+    request_collaboration, respond_collaboration, review_work_item, start_execution, start_work_item, submit_agent_run,
 )
 from workbuddy.services.common import content_hash, model_dict, utcnow
 from workbuddy.services.outbox import publish_batch
 from workbuddy.services.seed import seed_all
 from workbuddy.services.skills import SkillValidationError, import_skill, publish_skill
 from workbuddy.services.tools import ToolPolicyError, invoke_tool
-from workbuddy.services.governance import GovernanceError, add_dependency, decide_memory, propose_memory, remove_dependency, request_collaboration, respond_collaboration, update_work_item
+from workbuddy.services.governance import GovernanceError, add_dependency, decide_memory, propose_memory, remove_dependency, update_work_item
 from workbuddy.services.control import PausedError, set_control
 from workbuddy.services.context import correlation_id_var
 from workbuddy.services.scheduler import scheduler_tick

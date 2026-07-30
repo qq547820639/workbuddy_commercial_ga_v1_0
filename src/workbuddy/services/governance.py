@@ -5,8 +5,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from workbuddy.db.models import (
-    AgentProfile, Artifact, CollaborationRequest, MemoryRecord, Mission, SkillRelease,
-    TeamDefinition, WorkItem, WorkItemDependency,
+    AgentProfile, Artifact, MemoryRecord, Mission, SkillRelease,
+    WorkItem, WorkItemDependency,
 )
 from .audit import append_audit
 
@@ -102,38 +102,6 @@ def _has_cycle(nodes: set[str], edges: list[tuple[str, str]]) -> bool:
             indegree[nxt] -= 1
             if indegree[nxt] == 0: queue.append(nxt)
     return seen != len(nodes)
-
-
-def request_collaboration(session: Session, tenant_id: str, mission_id: str, receiving_team_key: str, objective: str, expected_artifact: str, input_scope: dict, actor_id: str) -> CollaborationRequest:
-    mission = session.scalar(select(Mission).where(Mission.id == mission_id, Mission.tenant_id == tenant_id))
-    receiving = session.scalar(select(TeamDefinition).where(TeamDefinition.tenant_id == tenant_id, TeamDefinition.team_key == receiving_team_key))
-    if not mission or not receiving:
-        raise GovernanceError("mission or receiving team not found")
-    if receiving.id == mission.primary_team_id:
-        raise GovernanceError("collaboration team must differ from the primary team")
-    request = CollaborationRequest(
-        tenant_id=tenant_id, mission_id=mission.id, sending_team_id=mission.primary_team_id,
-        receiving_team_id=receiving.id, objective=objective, input_scope=input_scope,
-        expected_artifact=expected_artifact, status="REQUESTED",
-    )
-    session.add(request); session.flush()
-    append_audit(session, tenant_id=tenant_id, actor_type="agent", actor_id=actor_id,
-                 action="collaboration.requested", aggregate_type="collaboration_request", aggregate_id=request.id,
-                 payload={"mission_id": mission.id, "receiving_team_id": receiving.id, "input_scope": input_scope})
-    return request
-
-
-def respond_collaboration(session: Session, tenant_id: str, request_id: str, status: str, response: dict, actor_id: str) -> CollaborationRequest:
-    request = session.scalar(select(CollaborationRequest).where(CollaborationRequest.id == request_id, CollaborationRequest.tenant_id == tenant_id))
-    if not request:
-        raise GovernanceError("collaboration request not found")
-    if request.status not in {"REQUESTED", "ACCEPTED", "IN_PROGRESS"}:
-        raise GovernanceError("collaboration request is closed")
-    request.status = status; request.response = response
-    append_audit(session, tenant_id=tenant_id, actor_type="agent", actor_id=actor_id,
-                 action="collaboration.responded", aggregate_type="collaboration_request", aggregate_id=request.id,
-                 payload={"status": status})
-    return request
 
 
 def propose_memory(session: Session, tenant_id: str, mission_id: str, memory_type: str, subject_key: str, content: dict, source_artifact_id: str | None, actor_id: str) -> MemoryRecord:

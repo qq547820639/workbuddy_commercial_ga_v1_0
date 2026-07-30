@@ -17,7 +17,7 @@ spec:
         seccompProfile: {type: RuntimeDefault}
       containers:
         - name: api
-          image: ghcr.io/your-org/workbuddy:0.4.0
+          image: ghcr.io/workbuddy/workbuddy:1.0.0
           args: ["uvicorn", "workbuddy.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers"]
           ports: [{name: http, containerPort: 8000}]
           envFrom:

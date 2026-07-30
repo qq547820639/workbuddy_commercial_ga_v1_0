@@ -1,8 +1,8 @@
 {
   "release": "WorkBuddy Commercial GA v1.0",
   "generated_at_utc": "2026-07-29T00:42:11.340806+00:00",
-  "file_count": 239,
-  "total_bytes": 2605323,
+  "file_count": 233,
+  "total_bytes": 2543470,
   "files": [
     {
       "path": ".dockerignore",
@@ -250,11 +250,6 @@
       "sha256": "24a808717a3b08190372e5fabad3356e487fcbd93dfe112c5d2217bfe11c03cf"
     },
     {
-      "path": "docs/COMMERCIAL_ARCHITECTURE.md",
-      "size": 1463,
-      "sha256": "0c903c88fc715f39e113003a87efc1ee9bc36dc98108d39f7ce05e7d25108568"
-    },
-    {
       "path": "docs/COMMERCIAL_COMPLETION_MATRIX.md",
       "size": 2773,
       "sha256": "524377f8e6900cb4d24c0cee5ad238736d58d74bb5a77a25af3677f0768c5afd"
@@ -268,11 +263,6 @@
       "path": "docs/COMPLIANCE_AND_LEGAL.md",
       "size": 940,
       "sha256": "65c783b5fdacb00861f402292f1209a52a5f305ba80f17ae3c3c1140cfb8d322"
-    },
-    {
-      "path": "docs/CONTROLLED_BETA_COMPLETION_MATRIX.md",
-      "size": 1093,
-      "sha256": "96daeaade0fca22150a9254dbf393154aa50a549df6ed15dd7c1f50bc61c08c7"
     },
     {
       "path": "docs/CUSTOMER_ONBOARDING.md",
@@ -293,11 +283,6 @@
       "path": "docs/FINAL_VERIFICATION.md",
       "size": 4895,
       "sha256": "83079302a85ef33b61430caf53c27a196ebe8a38a0c9712d80b3018197e66113"
-    },
-    {
-      "path": "docs/GATE_EVIDENCE.md",
-      "size": 1578,
-      "sha256": "6ef1b7325bb16a1f4235a57fdac3a3a232b79d11c8ad52d738d7487ae386fdab"
     },
     {
       "path": "docs/GA_RELEASE_GATES.md",
@@ -348,11 +333,6 @@
       "path": "docs/PRODUCTION_GAPS.md",
       "size": 8183,
       "sha256": "7f46770443918d81e6b3452952cfd5c4cd5e2ec8c0eca4f72eab668807a4c091"
-    },
-    {
-      "path": "docs/PRODUCTION_PILOT_RUNBOOK.md",
-      "size": 1151,
-      "sha256": "bb315d356fbd8831d7ce5b001ddcc42575b526816c654bca1a0254747d4fb6d8"
     },
     {
       "path": "docs/RELEASE_GATES.md",
@@ -930,11 +910,6 @@
       "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
-      "path": "src/workbuddy/services/alerting.py",
-      "size": 1553,
-      "sha256": "910c1cf7cb23a367267db2f9134bd472e34cf4d2c26c9f2a8d51234b8143ac3c"
-    },
-    {
       "path": "src/workbuddy/services/audit.py",
       "size": 3768,
       "sha256": "8c5a7935126b9e4707a3eff2e41878ca9dce2c67f020cc7a4327ecc079f055db"
@@ -968,11 +943,6 @@
       "path": "src/workbuddy/services/business.py",
       "size": 26971,
       "sha256": "c3462ebe1d92ba19802bc057ae78ce96647a198984aacbec75e04623270b57cd"
-    },
-    {
-      "path": "src/workbuddy/services/commercial.py",
-      "size": 55015,
-      "sha256": "6af443165427289777edbc4730b82fce3b46a6ba2dbf20807537999b1adb43db"
     },
     {
       "path": "src/workbuddy/services/common.py",

@@ -25,6 +25,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-cov>=5"]
+gcs = ["google-cloud-storage>=2.10"]
 
 [project.scripts]
 workbuddy-seed = "workbuddy.services.seed:main"
