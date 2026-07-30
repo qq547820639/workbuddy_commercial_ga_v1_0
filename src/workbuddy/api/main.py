@@ -39,6 +39,8 @@ from workbuddy.services.control import PausedError, set_control
 from workbuddy.services.context import correlation_id_var
 from workbuddy.services.scheduler import scheduler_tick
 from workbuddy.services.external_actions import prepare_external_operation, execute_external_operation, verify_unknown_external_operation
+from workbuddy.services.model_gateway import ModelGatewayError
+from workbuddy.services.planner import PlanValidationError
 from workbuddy.settings import settings
 
 
@@ -104,6 +106,16 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
     async def handle_governance(_request: Request, exc: ValueError):
         from fastapi.responses import JSONResponse
         return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+    @app.exception_handler(PlanValidationError)
+    async def handle_plan(_request: Request, exc: PlanValidationError):
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=422, content={"detail": str(exc)})
+
+    @app.exception_handler(ModelGatewayError)
+    async def handle_model_gateway(_request: Request, exc: ModelGatewayError):
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=502, content={"detail": str(exc)})
 
     @app.get("/")
     def index():

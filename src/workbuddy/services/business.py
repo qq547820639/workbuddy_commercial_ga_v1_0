@@ -211,9 +211,22 @@ def confirm_dispatch(session: Session, tenant_id: str, decision_id: str, team_ke
     team = session.scalar(select(TeamDefinition).where(TeamDefinition.tenant_id == tenant_id, TeamDefinition.team_key == team_key)) if team_key else session.get(TeamDefinition, decision.suggested_team_id)
     if not team:
         raise BusinessError("team not found")
-    workflow = session.scalar(select(WorkflowVersion).where(WorkflowVersion.team_id == team.id, WorkflowVersion.workflow_key == workflow_key, WorkflowVersion.status == "published").order_by(WorkflowVersion.version.desc()).limit(1)) if workflow_key else session.get(WorkflowVersion, decision.suggested_workflow_id) if decision.suggested_workflow_id else None
+    # Resolve the workflow strictly within the selected team. The dispatch's
+    # suggested_workflow_id may belong to a different team if the operator
+    # corrected the routing — using it across teams creates an inconsistent
+    # Mission (team A + team B's workflow) that can never be planned, because
+    # build_plan looks up agents by role inside mission.primary_team_id only.
+    if workflow_key:
+        workflow = session.scalar(select(WorkflowVersion).where(WorkflowVersion.team_id == team.id, WorkflowVersion.workflow_key == workflow_key, WorkflowVersion.status == "published").order_by(WorkflowVersion.version.desc()).limit(1))
+    elif decision.suggested_workflow_id:
+        suggested = session.get(WorkflowVersion, decision.suggested_workflow_id)
+        workflow = suggested if (suggested and suggested.team_id == team.id and suggested.status == "published") else None
+    else:
+        workflow = None
     if not workflow:
         workflow = session.scalar(select(WorkflowVersion).where(WorkflowVersion.team_id == team.id, WorkflowVersion.status == "published").order_by(WorkflowVersion.workflow_key).limit(1))
+    if not workflow:
+        raise BusinessError("selected team has no published workflow")
     constitution = session.scalar(select(TeamConstitutionVersion).where(TeamConstitutionVersion.team_id == team.id, TeamConstitutionVersion.status == "published").order_by(TeamConstitutionVersion.version.desc()).limit(1))
     lead = session.scalar(select(AgentProfile).where(AgentProfile.team_id == team.id, AgentProfile.is_lead.is_(True), AgentProfile.status == "active"))
     mission = session.scalar(select(Mission).where(Mission.tenant_id == tenant_id, Mission.source_type == "email", Mission.source_id == message.id))
