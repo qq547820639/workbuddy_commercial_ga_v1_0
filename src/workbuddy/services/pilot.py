@@ -12,6 +12,7 @@ from workbuddy.db.models import (
     ModelInvocation, OperationalDrill, PilotDailyMetric, PilotIncident, PilotMailbox,
     PilotProgram, QualityEvaluation, SyncRun,
 )
+from workbuddy.services import gates
 from workbuddy.services.audit import append_audit
 from workbuddy.services.common import content_hash, utcnow
 
@@ -267,22 +268,15 @@ def resolve_incident(
 
 
 def _verified_evidence(session: Session, program_id: str, gate_key: str) -> dict[str, GateEvidence]:
-    rows = session.scalars(select(GateEvidence).where(
-        GateEvidence.pilot_program_id == program_id, GateEvidence.gate_key == gate_key,
-        GateEvidence.status == "VERIFIED",
-    ).order_by(GateEvidence.observed_at.desc())).all()
-    result: dict[str, GateEvidence] = {}
-    for row in rows:
-        result.setdefault(row.evidence_type, row)
-    return result
+    return gates.verified_evidence_by_type(
+        session, GateEvidence, GateEvidence.pilot_program_id, program_id, gate_key,
+    )
 
 
 def evidence_snapshot_hash(session: Session, program_id: str, gate_key: str) -> str:
-    rows = session.scalars(select(GateEvidence).where(
-        GateEvidence.pilot_program_id == program_id, GateEvidence.gate_key == gate_key,
-        GateEvidence.status == "VERIFIED",
-    ).order_by(GateEvidence.evidence_type, GateEvidence.observed_at)).all()
-    return content_hash([{"id": x.id, "type": x.evidence_type, "hash": x.content_hash, "status": x.status} for x in rows])
+    return gates.evidence_snapshot_hash(
+        session, GateEvidence, GateEvidence.pilot_program_id, program_id, gate_key,
+    )
 
 
 def attest_gate(

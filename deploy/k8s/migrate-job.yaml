@@ -10,7 +10,7 @@ spec:
       restartPolicy: Never
       containers:
         - name: migrate
-          image: ghcr.io/your-org/workbuddy:0.4.0
+          image: ghcr.io/workbuddy/workbuddy:1.0.0
           command: ["alembic", "upgrade", "head"]
           envFrom:
             - configMapRef: {name: workbuddy-config}

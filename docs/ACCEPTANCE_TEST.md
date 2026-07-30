@@ -1,4 +1,4 @@
-# Production Pilot v0.4 验收
+# Production Pilot 验收
 
 ## 自动化
 
@@ -8,8 +8,8 @@
 
 覆盖：
 
-- 41 项测试；
-- 0001–0009 迁移；
+- 56 项测试（47 项原始 + 9 项 gap-closure）；
+- 0001–0019 迁移；
 - 多租户、状态机、UNKNOWN、Skill、工具和邮箱；
 - Pilot Evidence、签署失效、事故阻断、对象存储；
 - JWT Claim 覆盖伪造请求头；

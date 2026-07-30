@@ -35,6 +35,9 @@ workbuddy.db
 .coverage
 htmlcov/
 
+# --- Runtime / local artifacts ---
+var/
+
 # --- Terraform ---
 .terraform/
 .terraform.lock.hcl

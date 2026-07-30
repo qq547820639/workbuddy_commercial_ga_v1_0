@@ -145,7 +145,9 @@ REFERENCE_ONLY_UNTIL_COMMERCIAL_APPROVAL
 
 ## 关键文档
 
-- [商用架构](docs/COMMERCIAL_ARCHITECTURE.md)
+完整文档索引见 [docs/README.md](docs/README.md)。
+
+- [架构](docs/ARCHITECTURE.md)
 - [计费与计量](docs/BILLING_AND_METERING.md)
 - [客户上线](docs/CUSTOMER_ONBOARDING.md)
 - [支持 SLA](docs/SUPPORT_SLA.md)
