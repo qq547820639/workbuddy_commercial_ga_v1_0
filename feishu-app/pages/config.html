@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WorkBuddy · 配置</title>
+  <script src="js/api.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+      background: #f5f6f7;
+      color: #1d2129;
+      font-size: 14px;
+    }
+    .wb-container { max-width: 720px; margin: 0 auto; padding: 24px; }
+    .wb-page-title { font-size: 22px; font-weight: 600; margin: 0 0 8px 0; }
+    .wb-page-desc { color: #86909c; font-size: 13px; margin: 0 0 20px 0; }
+    .wb-card {
+      background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+      border: 1px solid #f0f1f2; padding: 24px;
+    }
+    .wb-form-group { margin-bottom: 20px; }
+    .wb-form-group:last-child { margin-bottom: 0; }
+    .wb-form-label {
+      display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px; color: #1d2129;
+    }
+    .wb-form-label .wb-required { color: #f53f3f; margin-left: 2px; }
+    .wb-form-hint { color: #86909c; font-size: 12px; margin-top: 4px; }
+    .wb-form-input {
+      width: 100%; height: 36px; padding: 0 12px; border: 1px solid #e5e6eb;
+      border-radius: 6px; font-size: 14px; outline: none; transition: border-color 0.15s;
+      font-family: inherit;
+    }
+    .wb-form-input:focus { border-color: #3370ff; }
+    .wb-form-input.wb-mono { font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size: 13px; }
+    .wb-form-input:disabled { background: #f7f8fa; color: #86909c; }
+    .wb-item-status {
+      display: inline-block; font-size: 12px; margin-left: 8px;
+      vertical-align: middle;
+    }
+    .wb-item-status.wb-ok { color: #00b42a; }
+    .wb-item-status.wb-fail { color: #f53f3f; }
+    .wb-item-status.wb-loading { color: #3370ff; }
+    .wb-actions { display: flex; gap: 12px; margin-top: 24px; align-items: center; }
+    .wb-btn {
+      height: 38px; padding: 0 20px; border: 1px solid #3370ff; background: #3370ff;
+      color: #fff; border-radius: 6px; font-size: 14px; cursor: pointer; transition: background 0.15s;
+    }
+    .wb-btn:hover:not(:disabled) { background: #2860e6; }
+    .wb-btn:disabled { background: #a8c7ff; border-color: #a8c7ff; cursor: not-allowed; }
+    .wb-banner {
+      padding: 10px 16px; border-radius: 6px; font-size: 13px; margin-bottom: 16px;
+    }
+    .wb-banner-success { background: #e8ffea; color: #00b42a; border: 1px solid #b3e6bd; }
+    .wb-banner-error { background: #ffece8; color: #f53f3f; border: 1px solid #fdcdc5; }
+    .wb-banner-info { background: #e8f0ff; color: #3370ff; border: 1px solid #b8d4ff; }
+  </style>
+</head>
+<body>
+  <div id="nav" data-active="config"></div>
+
+  <div class="wb-container">
+    <h1 class="wb-page-title">配置</h1>
+    <p class="wb-page-desc">填写 WorkBuddy 运行参数后点击「保存」。每项独立保存，失败项会单独标红。</p>
+
+    <div id="banner" class="wb-banner wb-banner-info" style="display:none;"></div>
+
+    <div class="wb-card">
+      <!-- NOTIFY_CHAT_ID -->
+      <div class="wb-form-group">
+        <label class="wb-form-label" for="cfg-NOTIFY_CHAT_ID">
+          NOTIFY_CHAT_ID<span class="wb-required">*</span>
+          <span id="status-NOTIFY_CHAT_ID" class="wb-item-status"></span>
+        </label>
+        <input id="cfg-NOTIFY_CHAT_ID" type="text" class="wb-form-input wb-mono"
+               placeholder="例如：oc_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
+        <div class="wb-form-hint">通知目标群聊的 chat_id（飞书群 OpenChatId，以 oc_ 开头）。worker 与「重发通知」都会往该群发卡片。</div>
+      </div>
+
+      <!-- POLL_INTERVAL -->
+      <div class="wb-form-group">
+        <label class="wb-form-label" for="cfg-POLL_INTERVAL">
+          POLL_INTERVAL<span class="wb-required">*</span>
+          <span id="status-POLL_INTERVAL" class="wb-item-status"></span>
+        </label>
+        <input id="cfg-POLL_INTERVAL" type="number" min="1" step="1" class="wb-form-input"
+               placeholder="例如：60" autocomplete="off" />
+        <div class="wb-form-hint">轮询间隔（秒）。建议 ≥ 30，过小会增大 API 压力。</div>
+      </div>
+
+      <!-- MAX_RECONNECT_BACKOFF -->
+      <div class="wb-form-group">
+        <label class="wb-form-label" for="cfg-MAX_RECONNECT_BACKOFF">
+          MAX_RECONNECT_BACKOFF<span class="wb-required">*</span>
+          <span id="status-MAX_RECONNECT_BACKOFF" class="wb-item-status"></span>
+        </label>
+        <input id="cfg-MAX_RECONNECT_BACKOFF" type="number" min="1" step="1" class="wb-form-input"
+               placeholder="例如：600" autocomplete="off" />
+        <div class="wb-form-hint">指数退避上限（秒）。轮询失败后重试间隔按 2^n 递增，达到此值后封顶。</div>
+      </div>
+
+      <div class="wb-actions">
+        <button id="save-btn" class="wb-btn">保存</button>
+        <span id="saving-tip" style="color:#86909c; font-size:13px;"></span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+    /**
+     * 配置页说明：
+     *   按任务最简实现，加载时不调任何 API（get_status 不返回 config 项，且未提供 get_config 云函数），
+     *   首次使用需用户手动填写配置。点击「保存」时按顺序逐项调用 update_config 云函数。
+     *
+     *   如后续新增 get_config 云函数返回 { ok, data: { NOTIFY_CHAT_ID, POLL_INTERVAL, ... } }，
+     *   可在 init 里调 WorkBuddyAPI 补一个 getConfig 方法回填表单。
+     */
+    (function () {
+      var KEYS = ['NOTIFY_CHAT_ID', 'POLL_INTERVAL', 'MAX_RECONNECT_BACKOFF'];
+
+      function $(id) { return document.getElementById(id); }
+      function setItemStatus(key, cls, text) {
+        var el = $('status-' + key);
+        el.className = 'wb-item-status ' + (cls || '');
+        el.textContent = text || '';
+      }
+      function showBanner(cls, text) {
+        var b = $('banner');
+        b.className = 'wb-banner ' + cls;
+        b.textContent = text;
+        b.style.display = 'block';
+      }
+      function hideBanner() { $('banner').style.display = 'none'; }
+
+      function validate(values) {
+        // 基础校验：非空 + 数值字段为正整数
+        if (!values.NOTIFY_CHAT_ID) return 'NOTIFY_CHAT_ID 不能为空';
+        if (!/^\d+$/.test(values.POLL_INTERVAL) || Number(values.POLL_INTERVAL) < 1) {
+          return 'POLL_INTERVAL 必须为正整数';
+        }
+        if (!/^\d+$/.test(values.MAX_RECONNECT_BACKOFF) || Number(values.MAX_RECONNECT_BACKOFF) < 1) {
+          return 'MAX_RECONNECT_BACKOFF 必须为正整数';
+        }
+        return null;
+      }
+
+      function save() {
+        var values = {};
+        for (var i = 0; i < KEYS.length; i++) {
+          values[KEYS[i]] = $('cfg-' + KEYS[i]).value.trim();
+        }
+        var err = validate(values);
+        if (err) {
+          showBanner('wb-banner-error', err);
+          return;
+        }
+
+        // 清空旧状态
+        hideBanner();
+        for (var j = 0; j < KEYS.length; j++) setItemStatus(KEYS[j], '', '');
+
+        var btn = $('save-btn');
+        btn.disabled = true;
+        $('saving-tip').textContent = '正在保存…';
+
+        // 顺序逐项保存，单条失败不中断后续，最后汇总结果
+        var results = {}; // key -> {ok, error}
+        function saveOne(idx) {
+          if (idx >= KEYS.length) return Promise.resolve();
+          var key = KEYS[idx];
+          setItemStatus(key, 'wb-loading', '保存中…');
+          return WorkBuddyAPI.updateConfig(key, values[key])
+            .then(function () {
+              results[key] = { ok: true };
+              setItemStatus(key, 'wb-ok', '已保存');
+            })
+            .catch(function (e) {
+              results[key] = { ok: false, error: e && e.message ? e.message : String(e) };
+              setItemStatus(key, 'wb-fail', '失败');
+            })
+            .then(function () { return saveOne(idx + 1); });
+        }
+
+        saveOne(0)
+          .then(function () {
+            btn.disabled = false;
+            $('saving-tip').textContent = '';
+            var failed = KEYS.filter(function (k) { return !results[k].ok; });
+            if (failed.length === 0) {
+              showBanner('wb-banner-success', '全部 ' + KEYS.length + ' 项配置已保存。');
+            } else {
+              var detail = failed.map(function (k) { return k + ': ' + results[k].error; }).join('；');
+              showBanner('wb-banner-error', '部分配置保存失败（' + failed.length + '/' + KEYS.length + '）：' + detail);
+            }
+          });
+      }
+
+      $('save-btn').addEventListener('click', save);
+
+      WorkBuddyNav.mount('nav');
+    })();
+  </script>
+</body>
+</html>
