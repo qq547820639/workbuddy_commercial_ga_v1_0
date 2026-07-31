@@ -40,9 +40,9 @@
 
 ## 阶段 5：最终验证与提交
 
-- [ ] Task 5: 全量验证与提交
-  - [ ] SubTask 5.1: 运行 `PATH="$PWD/.venv/bin:$PATH" bash scripts/verify.sh` 确认 12 步全绿
-  - [ ] SubTask 5.2: 提交所有改动到 origin/main（commit message: `refactor: 落地 P1 重构（连接器 ABC、billing→payments、business.py 拆分、unit_of_work 事务边界）`）
+- [x] Task 5: 全量验证与提交
+  - [x] SubTask 5.1: 运行 `PATH="$PWD/.venv/bin:$PATH" bash scripts/verify.sh` 确认 12 步全绿
+  - [x] SubTask 5.2: 提交所有改动到 origin/main（commit f2b1469）
 
 # Task Dependencies
 
