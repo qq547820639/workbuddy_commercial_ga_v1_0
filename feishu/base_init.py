@@ -30,6 +30,9 @@ BASE_NAME = "WorkBuddy数据层"
 # 表 -> 环境变量名 映射（顺序与 ALL_TABLES 一致）
 _TABLE_ENV_KEYS = [
     ("MAIL_TABLE", "MAIL_TABLE_ID"),
+    ("CONFIG_TABLE", "CONFIG_TABLE_ID"),
+    ("WORKER_STATUS_TABLE", "WORKER_STATUS_TABLE_ID"),
+    ("WORKER_LOG_TABLE", "WORKER_LOG_TABLE_ID"),
     ("TEAM_TABLE", "TEAM_TABLE_ID"),
     ("AGENT_TABLE", "AGENT_TABLE_ID"),
     ("MISSION_TABLE", "MISSION_TABLE_ID"),
@@ -207,7 +210,36 @@ def main() -> int:
         table_ids[env_key] = t_id
         _log(f"  {table['name']} table_id={t_id}")
 
-    # 3. 打印环境变量
+    # 3. 预填配置默认值（CONFIG_TABLE）
+    config_table_id = table_ids.get("CONFIG_TABLE_ID")
+    if config_table_id:
+        import base_client
+        _log("预填配置默认值…")
+        for row in base_schema.DEFAULT_CONFIG_ROWS:
+            r = base_client.create_record(
+                base_token, config_table_id, row, lark_cli_path=cli
+            )
+            if r.get("ok"):
+                _log(f"  配置 {row['config_key']} = {row['config_value']}")
+            else:
+                _log(f"  配置 {row['config_key']} 写入失败：{r.get('error', r)}")
+
+    # 4. 预填运行状态单行（WORKER_STATUS_TABLE）
+    status_table_id = table_ids.get("WORKER_STATUS_TABLE_ID")
+    if status_table_id:
+        import base_client
+        _log("预填运行状态单行…")
+        r = base_client.create_record(
+            base_token, status_table_id,
+            base_schema.DEFAULT_WORKER_STATUS_ROW,
+            lark_cli_path=cli,
+        )
+        if r.get("ok"):
+            _log("  运行状态初始行已写入")
+        else:
+            _log(f"  运行状态初始行写入失败：{r.get('error', r)}")
+
+    # 5. 打印环境变量
     print()
     print("Base 创建成功！")
     print(f"BASE_TOKEN={base_token}")

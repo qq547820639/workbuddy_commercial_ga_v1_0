@@ -97,11 +97,61 @@ AGENT_RUN_TABLE = {
     ],
 }
 
+# 配置表 — key-value 结构，供小白用户在飞书多维表格中直接编辑配置
+CONFIG_TABLE = {
+    "name": "配置",
+    "fields": [
+        {"name": "config_key", "type": "text", "description": "配置键名（如 NOTIFY_CHAT_ID）"},
+        {"name": "config_value", "type": "text", "description": "配置值"},
+    ],
+}
+
+# Worker 运行状态表 — 单行表（id 固定为 1），watch_worker 每轮更新
+WORKER_STATUS_TABLE = {
+    "name": "运行状态",
+    "fields": [
+        {"name": "is_running", "type": "checkbox", "description": "是否运行中"},
+        {"name": "last_poll_at", "type": "datetime", "description": "最近轮询时间"},
+        {"name": "total_notified", "type": "number", "description": "累计通知数"},
+        {"name": "error_count", "type": "number", "description": "错误次数"},
+    ],
+}
+
+# 运行日志表 — watch_worker 每轮写日志，保留最近 N 条
+WORKER_LOG_TABLE = {
+    "name": "运行日志",
+    "fields": [
+        {"name": "log_level", "type": "select", "options": [
+            {"name": "INFO"}, {"name": "WARN"}, {"name": "ERROR"}
+        ], "description": "日志级别"},
+        {"name": "message", "type": "text", "description": "日志内容"},
+        {"name": "created_at", "type": "datetime", "description": "记录时间"},
+    ],
+}
+
 ALL_TABLES = [
     MAIL_TABLE,
+    CONFIG_TABLE,
+    WORKER_STATUS_TABLE,
+    WORKER_LOG_TABLE,
     TEAM_TABLE,
     AGENT_TABLE,
     MISSION_TABLE,
     WORK_ITEM_TABLE,
     AGENT_RUN_TABLE,
 ]
+
+# 预填配置默认值（base_init.py 创建 CONFIG_TABLE 后写入）
+DEFAULT_CONFIG_ROWS = [
+    {"config_key": "NOTIFY_CHAT_ID", "config_value": "oc_716f4d911915d3e3d91a053e1a80f4a8"},
+    {"config_key": "POLL_INTERVAL", "config_value": "60"},
+    {"config_key": "MAX_RECONNECT_BACKOFF", "config_value": "300"},
+]
+
+# 运行状态表初始单行（id 固定为 1）
+DEFAULT_WORKER_STATUS_ROW = {
+    "is_running": False,
+    "last_poll_at": None,
+    "total_notified": 0,
+    "error_count": 0,
+}

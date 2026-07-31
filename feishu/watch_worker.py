@@ -131,8 +131,69 @@ def _archive_mail(cfg, mail_data: dict) -> None:
         _log(f"归档异常（已吞掉）：{exc}")
 
 
-def _poll_once(cfg, notified_ids: set) -> None:
-    """单次轮询：triage 拉未读列表 → 过滤去重 → messages 拉详情 → 逐封发通知。"""
+def _update_worker_status(cfg, **fields) -> None:
+    """更新运行状态表（单行表，id=1）；失败只记日志，不抛异常。"""
+    if not (cfg.base_token and cfg.worker_status_table_id):
+        return
+    try:
+        result = base_client.create_record(
+            cfg.base_token,
+            cfg.worker_status_table_id,
+            fields,
+            lark_cli_path=cfg.lark_cli_path,
+        )
+        if not result.get("ok"):
+            _log(f"运行状态更新失败：{result.get('error', result)}")
+    except Exception as exc:  # noqa: BLE001
+        _log(f"运行状态更新异常（已吞掉）：{exc}")
+
+
+def _write_log(cfg, level: str, message: str) -> None:
+    """写一条运行日志到 Base 运行日志表；失败只记日志，不抛异常。"""
+    if not (cfg.base_token and cfg.worker_log_table_id):
+        return
+    try:
+        result = base_client.create_record(
+            cfg.base_token,
+            cfg.worker_log_table_id,
+            {
+                "log_level": level,
+                "message": message[:500],
+                "created_at": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            },
+            lark_cli_path=cfg.lark_cli_path,
+        )
+        if not result.get("ok"):
+            _log(f"日志写入失败：{result.get('error', result)}")
+    except Exception as exc:  # noqa: BLE001
+        _log(f"日志写入异常（已吞掉）：{exc}")
+
+
+def _load_worker_status(cfg) -> dict:
+    """从 Base 加载运行状态（total_notified / error_count）；失败返回默认值。"""
+    defaults = {"total_notified": 0, "error_count": 0}
+    if not (cfg.base_token and cfg.worker_status_table_id):
+        return defaults
+    try:
+        records = base_client.list_records(
+            cfg.base_token, cfg.worker_status_table_id,
+            max_records=1, lark_cli_path=cfg.lark_cli_path,
+        )
+        if not records:
+            return defaults
+        fields = records[0].get("fields") or {}
+        defaults["total_notified"] = int(_cell_text(fields.get("total_notified")) or 0)
+        defaults["error_count"] = int(_cell_text(fields.get("error_count")) or 0)
+        return defaults
+    except Exception:
+        return defaults
+
+
+def _poll_once(cfg, notified_ids: set) -> int:
+    """单次轮询：triage 拉未读列表 → 过滤去重 → messages 拉详情 → 逐封发通知。
+
+    返回本轮成功发送的通知数。
+    """
     # 1. triage 拉未读收件箱列表（bare JSON）
     triage_argv = [
         cfg.lark_cli_path,
@@ -169,7 +230,7 @@ def _poll_once(cfg, notified_ids: set) -> None:
     new_ids = [mid for mid in new_ids if mid not in notified_ids]
     _log(f"triage: {len(messages)} unread, {len(new_ids)} new (notified_total={len(notified_ids)})")
     if not new_ids:
-        return
+        return 0
 
     # 2. 批量拉邮件详情（json 信封）
     msg_argv = [
@@ -202,6 +263,7 @@ def _poll_once(cfg, notified_ids: set) -> None:
 
     # 3. 逐封发通知；notifier 内部已吞异常，返回 ok 状态
     _log(f"发送 {len(detailed)} 封邮件通知…")
+    notified_count = 0
     for msg in detailed:
         try:
             result = notifier.send_mail_notification(
@@ -209,6 +271,7 @@ def _poll_once(cfg, notified_ids: set) -> None:
             )
             if result.get("ok"):
                 _log(f"已通知：{msg.get('subject', '?')[:40]}")
+                notified_count += 1
             else:
                 _log(f"通知发送失败：{result.get('error', result)}")
         except Exception as exc:  # noqa: BLE001
@@ -220,6 +283,7 @@ def _poll_once(cfg, notified_ids: set) -> None:
 
     # 4. 全部处理过的 id 入集（即使详情拉取失败也加入，避免反复重试）
     notified_ids.update(new_ids)
+    return notified_count
 
 
 def main() -> int:
@@ -232,6 +296,16 @@ def main() -> int:
     _log(f"lark-cli: {cfg.lark_cli_path}")
     _log(f"mailbox={cfg.watch_mailbox} poll_interval={cfg.poll_interval}s")
     _log(f"通知目标 chat_id={cfg.notify_chat_id}")
+
+    # 从 Base 加载累计计数（跨重启持久化）
+    status = _load_worker_status(cfg)
+    total_notified = status["total_notified"]
+    error_count = status["error_count"]
+    _log(f"累计通知={total_notified} 错误次数={error_count}")
+
+    # 标记运行中
+    _update_worker_status(cfg, is_running=True)
+    _write_log(cfg, "INFO", f"worker 启动 (poll_interval={cfg.poll_interval}s)")
 
     stop_flag = threading.Event()
 
@@ -265,14 +339,26 @@ def main() -> int:
 
     while not stop_flag.is_set():
         try:
-            _poll_once(cfg, notified_ids)
+            notified = _poll_once(cfg, notified_ids)
+            total_notified += notified
             attempt = 0
+            _update_worker_status(
+                cfg,
+                is_running=True,
+                last_poll_at=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                total_notified=total_notified,
+                error_count=error_count,
+            )
         except AuthError:
             _log("token 过期，请重新运行 `lark-cli auth login --domain mail`")
-            _log("worker 退出，需人工介入。")
+            _write_log(cfg, "ERROR", "token 过期，worker 退出")
+            _update_worker_status(cfg, is_running=False)
             return EXIT_AUTH
         except Exception as exc:  # noqa: BLE001
             _log(f"轮询异常：{exc}")
+            error_count += 1
+            _write_log(cfg, "ERROR", f"轮询异常：{exc}")
+            _update_worker_status(cfg, error_count=error_count)
             backoff = min(2 ** attempt, cfg.max_reconnect_backoff)
             _log(f"{backoff}s 后重试")
             attempt += 1
@@ -280,6 +366,8 @@ def main() -> int:
         if stop_flag.wait(timeout=cfg.poll_interval):
             break
 
+    _update_worker_status(cfg, is_running=False)
+    _write_log(cfg, "INFO", "worker 退出")
     _log("worker 退出")
     return EXIT_OK
 
