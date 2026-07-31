@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WorkBuddy · 控制</title>
+  <script src="js/api.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+      background: #f5f6f7;
+      color: #1d2129;
+      font-size: 14px;
+    }
+    .wb-container { max-width: 960px; margin: 0 auto; padding: 24px; }
+    .wb-page-title { font-size: 22px; font-weight: 600; margin: 0 0 16px 0; }
+    .wb-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .wb-card {
+      background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+      border: 1px solid #f0f1f2; overflow: hidden;
+    }
+    .wb-card-head { padding: 16px 20px; border-bottom: 1px solid #f0f1f2; }
+    .wb-card-head h2 { font-size: 16px; margin: 0; font-weight: 600; }
+    .wb-card-body { padding: 20px; }
+    .wb-banner {
+      padding: 10px 16px; border-radius: 6px; font-size: 13px; margin-bottom: 16px;
+    }
+    .wb-banner-success { background: #e8ffea; color: #00b42a; border: 1px solid #b3e6bd; }
+    .wb-banner-error { background: #ffece8; color: #f53f3f; border: 1px solid #fdcdc5; }
+    .wb-banner-info { background: #e8f0ff; color: #3370ff; border: 1px solid #b8d4ff; }
+    /* 启停状态 */
+    .wb-run-status {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    }
+    .wb-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .wb-dot-running { background: #00b42a; box-shadow: 0 0 0 4px rgba(0,180,42,0.15); }
+    .wb-dot-stopped { background: #c9cdd4; box-shadow: 0 0 0 4px rgba(201,205,212,0.2); }
+    .wb-run-text { font-size: 16px; font-weight: 600; }
+    .wb-run-sub { color: #86909c; font-size: 13px; margin-left: auto; }
+    .wb-btn-row { display: flex; gap: 12px; flex-wrap: wrap; }
+    .wb-btn {
+      height: 38px; padding: 0 20px; border-radius: 6px; font-size: 14px; cursor: pointer;
+      transition: background 0.15s; border: 1px solid transparent; white-space: nowrap;
+    }
+    .wb-btn:disabled { cursor: not-allowed; opacity: 0.6; }
+    .wb-btn-start { background: #00b42a; color: #fff; border-color: #00b42a; }
+    .wb-btn-start:hover:not(:disabled) { background: #009a26; }
+    .wb-btn-stop { background: #f53f3f; color: #fff; border-color: #f53f3f; }
+    .wb-btn-stop:hover:not(:disabled) { background: #d93636; }
+    .wb-btn-primary { background: #3370ff; color: #fff; border-color: #3370ff; }
+    .wb-btn-primary:hover:not(:disabled) { background: #2860e6; }
+    /* 重发区域 */
+    .wb-form-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .wb-input {
+      flex: 1; min-width: 200px; height: 38px; padding: 0 12px; border: 1px solid #e5e6eb;
+      border-radius: 6px; font-size: 13px; outline: none; transition: border-color 0.15s;
+      font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+    }
+    .wb-input:focus { border-color: #3370ff; }
+    .wb-hint { color: #86909c; font-size: 12px; margin-top: 8px; }
+    /* 日志列表 */
+    .wb-log-list { list-style: none; margin: 0; padding: 0; max-height: 360px; overflow-y: auto; }
+    .wb-log-item {
+      display: grid; grid-template-columns: 150px 60px 1fr; gap: 10px;
+      padding: 10px 20px; border-bottom: 1px solid #f7f8fa; font-size: 13px; align-items: start;
+    }
+    .wb-log-item:last-child { border-bottom: none; }
+    .wb-log-time { color: #86909c; font-variant-numeric: tabular-nums; }
+    .wb-log-level {
+      display: inline-block; padding: 1px 8px; border-radius: 4px;
+      font-size: 12px; font-weight: 600; text-align: center;
+    }
+    .wb-log-level-INFO { color: #86909c; background: #f2f3f5; }
+    .wb-log-level-WARN { color: #ff7d00; background: #fff7e8; }
+    .wb-log-level-ERROR { color: #f53f3f; background: #ffece8; }
+    .wb-log-msg { color: #1d2129; word-break: break-word; }
+    .wb-empty { padding: 32px 20px; text-align: center; color: #c9cdd4; }
+    .wb-log-foot { padding: 10px 20px; color: #86909c; font-size: 12px; border-top: 1px solid #f0f1f2; }
+    @media (max-width: 800px) {
+      .wb-grid { grid-template-columns: 1fr; }
+      .wb-log-item { grid-template-columns: 1fr; gap: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="nav" data-active="control"></div>
+
+  <div class="wb-container">
+    <h1 class="wb-page-title">控制台</h1>
+    <div id="banner" class="wb-banner" style="display:none;"></div>
+
+    <div class="wb-grid">
+      <!-- 启停控制 -->
+      <div class="wb-card">
+        <div class="wb-card-head"><h2>Worker 启停</h2></div>
+        <div class="wb-card-body">
+          <div class="wb-run-status">
+            <span id="run-dot" class="wb-dot wb-dot-stopped"></span>
+            <span id="run-text" class="wb-run-text">加载中…</span>
+            <span id="run-sub" class="wb-run-sub">—</span>
+          </div>
+          <div class="wb-btn-row">
+            <button id="start-btn" class="wb-btn wb-btn-start" disabled>启动</button>
+            <button id="stop-btn" class="wb-btn wb-btn-stop" disabled>停止</button>
+            <button id="refresh-btn" class="wb-btn wb-btn-primary">刷新状态</button>
+          </div>
+          <div class="wb-hint">启动/停止会调用 control_worker 云函数切换 worker 运行状态。</div>
+        </div>
+      </div>
+
+      <!-- 重发通知 -->
+      <div class="wb-card">
+        <div class="wb-card-head"><h2>重发通知</h2></div>
+        <div class="wb-card-body">
+          <div class="wb-form-row">
+            <input id="resend-input" class="wb-input" type="text" placeholder="输入 message_id" autocomplete="off" />
+            <button id="resend-btn" class="wb-btn wb-btn-primary">重发</button>
+          </div>
+          <div class="wb-hint">按归档邮件的 message_id 重发 IM 卡片到 NOTIFY_CHAT_ID 群。</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 操作日志 -->
+    <div class="wb-card">
+      <div class="wb-card-head"><h2>操作日志（最近 10 条）</h2></div>
+      <ul id="log-list" class="wb-log-list">
+        <li class="wb-empty">加载中…</li>
+      </ul>
+      <div class="wb-log-foot">每次「刷新状态」会同步刷新日志；启停 / 重发操作完成后也会自动刷新。</div>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+    (function () {
+      var LOG_LIMIT = 10;
+      var refreshTimerId = null;
+
+      function $(id) { return document.getElementById(id); }
+      function escapeHtml(s) {
+        return String(s == null ? '' : s)
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      }
+      function fmtTime(s) {
+        if (!s) return '—';
+        var d = new Date(String(s).replace(' ', 'T'));
+        if (isNaN(d.getTime())) return s;
+        var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+        return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
+          ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+      }
+      function showBanner(cls, text) {
+        var b = $('banner');
+        b.className = 'wb-banner ' + cls;
+        b.textContent = text;
+        b.style.display = 'block';
+      }
+      function hideBanner() { $('banner').style.display = 'none'; }
+
+      function renderStatus(data) {
+        var dot = $('run-dot'), text = $('run-text'), sub = $('run-sub');
+        var startBtn = $('start-btn'), stopBtn = $('stop-btn');
+        if (data.is_running) {
+          dot.className = 'wb-dot wb-dot-running';
+          text.textContent = '运行中';
+          text.style.color = '#00b42a';
+          startBtn.disabled = true;
+          stopBtn.disabled = false;
+        } else {
+          dot.className = 'wb-dot wb-dot-stopped';
+          text.textContent = '已停止';
+          text.style.color = '#86909c';
+          startBtn.disabled = false;
+          stopBtn.disabled = true;
+        }
+        sub.textContent = data.last_poll_at ? ('最近轮询：' + fmtTime(data.last_poll_at)) : '暂无轮询记录';
+      }
+
+      function renderLogs(logs) {
+        var list = $('log-list');
+        if (!logs || logs.length === 0) {
+          list.innerHTML = '<li class="wb-empty">暂无日志</li>';
+          return;
+        }
+        var slice = logs.slice(0, LOG_LIMIT);
+        var html = '';
+        for (var i = 0; i < slice.length; i++) {
+          var log = slice[i];
+          var level = (log.log_level || 'INFO').toUpperCase();
+          var levelClass = 'wb-log-level-' + level;
+          if (level !== 'INFO' && level !== 'WARN' && level !== 'ERROR') {
+            levelClass = 'wb-log-level-INFO'; level = level || 'INFO';
+          }
+          html +=
+            '<li class="wb-log-item">' +
+              '<span class="wb-log-time">' + escapeHtml(fmtTime(log.created_at)) + '</span>' +
+              '<span class="wb-log-level ' + levelClass + '">' + escapeHtml(level) + '</span>' +
+              '<span class="wb-log-msg">' + escapeHtml(log.message != null ? log.message : '') + '</span>' +
+            '</li>';
+        }
+        list.innerHTML = html;
+      }
+
+      function loadStatus() {
+        return WorkBuddyAPI.getStatus()
+          .then(function (data) {
+            renderStatus(data);
+            renderLogs(data.recent_logs);
+          })
+          .catch(function (err) {
+            showBanner('wb-banner-error', '获取状态失败：' + (err && err.message ? err.message : err));
+            // 加载失败时禁用启停按钮，避免误操作
+            $('start-btn').disabled = true;
+            $('stop-btn').disabled = true;
+          });
+      }
+
+      function control(action) {
+        var btn = action === 'start' ? $('start-btn') : $('stop-btn');
+        var other = action === 'start' ? $('stop-btn') : $('start-btn');
+        btn.disabled = true; other.disabled = true;
+        btn.textContent = '处理中…';
+        hideBanner();
+        WorkBuddyAPI.controlWorker(action)
+          .then(function (data) {
+            renderStatus({ is_running: data.is_running, last_poll_at: null });
+            // 立即刷新拿完整状态 + 日志
+            return loadStatus();
+          })
+          .then(function () {
+            showBanner('wb-banner-success', 'worker 已' + (action === 'start' ? '启动' : '停止'));
+          })
+          .catch(function (err) {
+            showBanner('wb-banner-error', (action === 'start' ? '启动' : '停止') + '失败：' + (err && err.message ? err.message : err));
+            return loadStatus(); // 刷新恢复按钮真实状态
+          })
+          .then(function () {
+            btn.textContent = action === 'start' ? '启动' : '停止';
+          });
+      }
+
+      function resend() {
+        var input = $('resend-input');
+        var btn = $('resend-btn');
+        var mid = input.value.trim();
+        if (!mid) {
+          showBanner('wb-banner-error', '请输入 message_id');
+          return;
+        }
+        btn.disabled = true;
+        var oldText = btn.textContent;
+        btn.textContent = '发送中…';
+        hideBanner();
+        WorkBuddyAPI.resendNotification(mid)
+          .then(function (data) {
+            showBanner('wb-banner-success', '已重发通知：' + (data.subject || mid));
+            // 重发会产生新日志，刷新一下
+            return loadStatus();
+          })
+          .catch(function (err) {
+            showBanner('wb-banner-error', '重发失败：' + (err && err.message ? err.message : err));
+          })
+          .then(function () {
+            btn.disabled = false;
+            btn.textContent = oldText;
+          });
+      }
+
+      function bind() {
+        $('start-btn').addEventListener('click', function () { control('start'); });
+        $('stop-btn').addEventListener('click', function () { control('stop'); });
+        $('refresh-btn').addEventListener('click', function () { hideBanner(); loadStatus(); });
+        $('resend-btn').addEventListener('click', resend);
+        $('resend-input').addEventListener('keydown', function (e) {
+          if (e.key === 'Enter') resend();
+        });
+      }
+
+      // 页面可见时刷新，隐藏时暂停轮询（30s 轮询一次状态）
+      function startAutoRefresh() {
+        if (refreshTimerId) return;
+        refreshTimerId = setInterval(function () {
+          if (!document.hidden) loadStatus();
+        }, 30000);
+      }
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden) loadStatus();
+      });
+
+      WorkBuddyNav.mount('nav').then(function () {
+        bind();
+        loadStatus().then(startAutoRefresh);
+      }, function () {
+        bind();
+        loadStatus().then(startAutoRefresh);
+      });
+    })();
+  </script>
+</body>
+</html>

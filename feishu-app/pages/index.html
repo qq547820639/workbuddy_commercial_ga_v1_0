@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WorkBuddy · 仪表盘</title>
+  <script src="js/api.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+      background: #f5f6f7;
+      color: #1d2129;
+      font-size: 14px;
+    }
+    .wb-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+    .wb-page-title {
+      font-size: 22px;
+      font-weight: 600;
+      margin: 0 0 16px 0;
+    }
+    /* 状态卡片 */
+    .wb-status-card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px 24px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      border: 1px solid #f0f1f2;
+    }
+    .wb-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .wb-dot-running { background: #00b42a; box-shadow: 0 0 0 4px rgba(0, 180, 42, 0.15); }
+    .wb-dot-stopped { background: #c9cdd4; box-shadow: 0 0 0 4px rgba(201, 205, 212, 0.2); }
+    .wb-status-text { font-size: 16px; font-weight: 600; }
+    .wb-status-sub { color: #86909c; font-size: 13px; margin-left: auto; }
+    /* 数据卡片栅格 */
+    .wb-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+    .wb-stat-card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 18px 20px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+      border: 1px solid #f0f1f2;
+    }
+    .wb-stat-label { color: #86909c; font-size: 13px; margin-bottom: 8px; }
+    .wb-stat-value { font-size: 24px; font-weight: 600; color: #1d2129; word-break: break-all; }
+    .wb-stat-value.wb-skeleton {
+      display: inline-block;
+      width: 60%;
+      height: 22px;
+      background: #f2f3f5;
+      border-radius: 4px;
+      animation: wb-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes wb-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+    /* 日志卡片 */
+    .wb-card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+      border: 1px solid #f0f1f2;
+      overflow: hidden;
+    }
+    .wb-card-head {
+      padding: 16px 20px;
+      border-bottom: 1px solid #f0f1f2;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .wb-card-head h2 { font-size: 16px; margin: 0; font-weight: 600; }
+    .wb-card-head .wb-auto-tag {
+      margin-left: auto;
+      font-size: 12px;
+      color: #3370ff;
+      background: #e8f0ff;
+      padding: 2px 8px;
+      border-radius: 10px;
+    }
+    .wb-log-list { list-style: none; margin: 0; padding: 0; }
+    .wb-log-item {
+      display: grid;
+      grid-template-columns: 160px 64px 1fr;
+      gap: 12px;
+      padding: 12px 20px;
+      border-bottom: 1px solid #f7f8fa;
+      font-size: 13px;
+      align-items: start;
+    }
+    .wb-log-item:last-child { border-bottom: none; }
+    .wb-log-time { color: #86909c; font-variant-numeric: tabular-nums; }
+    .wb-log-level {
+      display: inline-block;
+      padding: 1px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+    }
+    .wb-log-level-INFO { color: #86909c; background: #f2f3f5; }
+    .wb-log-level-WARN { color: #ff7d00; background: #fff7e8; }
+    .wb-log-level-ERROR { color: #f53f3f; background: #ffece8; }
+    .wb-log-msg { color: #1d2129; word-break: break-word; }
+    .wb-empty { padding: 40px 20px; text-align: center; color: #c9cdd4; }
+    .wb-error-banner {
+      background: #ffece8;
+      color: #f53f3f;
+      padding: 10px 16px;
+      border-radius: 6px;
+      margin-bottom: 16px;
+      font-size: 13px;
+      border: 1px solid #fdcdc5;
+    }
+    @media (max-width: 900px) {
+      .wb-stats { grid-template-columns: repeat(2, 1fr); }
+      .wb-log-item { grid-template-columns: 120px 56px 1fr; }
+    }
+    @media (max-width: 600px) {
+      .wb-container { padding: 16px; }
+      .wb-stats { grid-template-columns: 1fr; }
+      .wb-log-item { grid-template-columns: 1fr; gap: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="nav" data-active="dashboard"></div>
+
+  <div class="wb-container">
+    <h1 class="wb-page-title">仪表盘</h1>
+    <div id="error-banner" class="wb-error-banner" style="display:none;"></div>
+
+    <!-- 运行状态 -->
+    <div class="wb-status-card">
+      <span id="status-dot" class="wb-dot wb-dot-stopped"></span>
+      <span id="status-text" class="wb-status-text">加载中…</span>
+      <span id="status-sub" class="wb-status-sub">—</span>
+    </div>
+
+    <!-- 4 个数据卡片 -->
+    <div class="wb-stats">
+      <div class="wb-stat-card">
+        <div class="wb-stat-label">最近轮询时间</div>
+        <div id="stat-last-poll" class="wb-stat-value"><span class="wb-skeleton"></span></div>
+      </div>
+      <div class="wb-stat-card">
+        <div class="wb-stat-label">累计已通知</div>
+        <div id="stat-total-notified" class="wb-stat-value"><span class="wb-skeleton"></span></div>
+      </div>
+      <div class="wb-stat-card">
+        <div class="wb-stat-label">归档总数</div>
+        <div id="stat-archive-total" class="wb-stat-value"><span class="wb-skeleton"></span></div>
+      </div>
+      <div class="wb-stat-card">
+        <div class="wb-stat-label">错误次数</div>
+        <div id="stat-error-count" class="wb-stat-value"><span class="wb-skeleton"></span></div>
+      </div>
+    </div>
+
+    <!-- 最近日志 -->
+    <div class="wb-card">
+      <div class="wb-card-head">
+        <h2>最近日志</h2>
+        <span class="wb-auto-tag">每 10s 自动刷新</span>
+      </div>
+      <ul id="log-list" class="wb-log-list">
+        <li class="wb-empty">加载中…</li>
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+    (function () {
+      var REFRESH_INTERVAL = 10000; // 10s
+      var timerId = null;
+
+      function fmtTime(s) {
+        if (!s) return '—';
+        // 兼容 'YYYY-MM-DD HH:MM:SS' 与 ISO
+        var str = String(s).replace(' ', 'T');
+        var d = new Date(str);
+        if (isNaN(d.getTime())) return s;
+        var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+          ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+      }
+
+      function showError(msg) {
+        var banner = document.getElementById('error-banner');
+        banner.textContent = '加载状态失败：' + msg;
+        banner.style.display = 'block';
+      }
+      function clearError() {
+        document.getElementById('error-banner').style.display = 'none';
+      }
+
+      function renderStatus(data) {
+        var dot = document.getElementById('status-dot');
+        var text = document.getElementById('status-text');
+        var sub = document.getElementById('status-sub');
+        if (data.is_running) {
+          dot.className = 'wb-dot wb-dot-running';
+          text.textContent = '运行中';
+          text.style.color = '#00b42a';
+        } else {
+          dot.className = 'wb-dot wb-dot-stopped';
+          text.textContent = '已停止';
+          text.style.color = '#86909c';
+        }
+        sub.textContent = data.last_poll_at ? ('最近轮询：' + fmtTime(data.last_poll_at)) : '暂无轮询记录';
+
+        document.getElementById('stat-last-poll').textContent = data.last_poll_at ? fmtTime(data.last_poll_at) : '—';
+        document.getElementById('stat-total-notified').textContent = String(data.total_notified != null ? data.total_notified : 0);
+        document.getElementById('stat-archive-total').textContent = String(data.archive_total != null ? data.archive_total : 0);
+        document.getElementById('stat-error-count').textContent = String(data.error_count != null ? data.error_count : 0);
+      }
+
+      function renderLogs(logs) {
+        var list = document.getElementById('log-list');
+        if (!logs || logs.length === 0) {
+          list.innerHTML = '<li class="wb-empty">暂无日志</li>';
+          return;
+        }
+        var html = '';
+        for (var i = 0; i < logs.length; i++) {
+          var log = logs[i];
+          var level = (log.log_level || 'INFO').toUpperCase();
+          var levelClass = 'wb-log-level-' + level;
+          if (level !== 'INFO' && level !== 'WARN' && level !== 'ERROR') {
+            levelClass = 'wb-log-level-INFO';
+            level = level || 'INFO';
+          }
+          var msg = log.message != null ? String(log.message) : '';
+          var time = fmtTime(log.created_at);
+          html +=
+            '<li class="wb-log-item">' +
+              '<span class="wb-log-time">' + escapeHtml(time) + '</span>' +
+              '<span class="wb-log-level ' + levelClass + '">' + escapeHtml(level) + '</span>' +
+              '<span class="wb-log-msg">' + escapeHtml(msg) + '</span>' +
+            '</li>';
+        }
+        list.innerHTML = html;
+      }
+
+      function escapeHtml(s) {
+        return s
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function loadStatus() {
+        return WorkBuddyAPI.getStatus()
+          .then(function (data) {
+            clearError();
+            renderStatus(data);
+            renderLogs(data.recent_logs);
+          })
+          .catch(function (err) {
+            showError(err && err.message ? err.message : String(err));
+          });
+      }
+
+      function start() {
+        loadStatus();
+        timerId = setInterval(loadStatus, REFRESH_INTERVAL);
+      }
+
+      // 页面隐藏时暂停轮询，可见时立即刷新并恢复，避免后台浪费
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+          if (timerId) { clearInterval(timerId); timerId = null; }
+        } else if (!timerId) {
+          loadStatus();
+          timerId = setInterval(loadStatus, REFRESH_INTERVAL);
+        }
+      });
+
+      // 先挂导航再启动数据刷新
+      WorkBuddyNav.mount('nav').then(start, start);
+    })();
+  </script>
+</body>
+</html>
