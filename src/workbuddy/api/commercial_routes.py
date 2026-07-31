@@ -240,7 +240,7 @@ def organization_get(tid: str = Depends(tenant_id), session: Session = Depends(d
 def organization_invite(body: UserInviteIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), roles: tuple[str, ...] = Depends(actor_roles), session: Session = Depends(db_session)):
     if not set(roles).intersection({"owner", "admin"}): raise HTTPException(403, "owner or admin role is required")
     try:
-        row = invite_user(session, tid, actor, **body.model_dump()); session.commit(); return model_dict(row)
+        row = invite_user(session, tid, actor, **body.model_dump()); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -248,13 +248,13 @@ def organization_invite(body: UserInviteIn, tid: str = Depends(tenant_id), actor
 def organization_user_role(user_id: str, body: UserRoleIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), roles: tuple[str, ...] = Depends(actor_roles), session: Session = Depends(db_session)):
     if not set(roles).intersection({"owner", "admin"}): raise HTTPException(403, "owner or admin role is required")
     try:
-        row = update_user_role(session, tid, user_id, actor, role=body.role); session.commit(); return model_dict(row)
+        row = update_user_role(session, tid, user_id, actor, role=body.role); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
 @router.get("/v1/commercial/plans")
 def plans(tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-    rows = ensure_plan_catalog(session, tid); session.commit()
+    rows = ensure_plan_catalog(session, tid)
     return [model_dict(x) for x in rows]
 
 
@@ -268,7 +268,7 @@ def subscription(tid: str = Depends(tenant_id), session: Session = Depends(db_se
 def subscription_create(body: SubscriptionIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), roles: tuple[str, ...] = Depends(actor_roles), session: Session = Depends(db_session)):
     _finance_role(roles)
     try:
-        row = create_subscription(session, tid, actor, **body.model_dump()); session.commit(); return model_dict(row)
+        row = create_subscription(session, tid, actor, **body.model_dump()); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -276,14 +276,14 @@ def subscription_create(body: SubscriptionIn, tid: str = Depends(tenant_id), act
 def subscription_transition(subscription_id: str, body: TransitionIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), roles: tuple[str, ...] = Depends(actor_roles), session: Session = Depends(db_session)):
     _finance_role(roles)
     try:
-        row = transition_subscription(session, tid, subscription_id, actor, body.target, provider_ref=body.provider_ref); session.commit(); return model_dict(row)
+        row = transition_subscription(session, tid, subscription_id, actor, body.target, provider_ref=body.provider_ref); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
 @router.post("/v1/commercial/usage", status_code=201)
 def usage_record(body: UsageIn, tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
     try:
-        row = record_usage(session, tid, **body.model_dump()); session.commit(); return model_dict(row)
+        row = record_usage(session, tid, **body.model_dump()); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -302,7 +302,7 @@ def usage_records(limit: int = Query(default=100, ge=1, le=500), tid: str = Depe
 def invoice_create(body: InvoiceIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), roles: tuple[str, ...] = Depends(actor_roles), session: Session = Depends(db_session)):
     _finance_role(roles)
     try:
-        row = build_invoice(session, tid, actor, body.subscription_id, tax_rate_basis_points=body.tax_rate_basis_points); session.commit(); return model_dict(row)
+        row = build_invoice(session, tid, actor, body.subscription_id, tax_rate_basis_points=body.tax_rate_basis_points); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -315,7 +315,7 @@ def invoice_list(tid: str = Depends(tenant_id), session: Session = Depends(db_se
 def invoice_transition(invoice_id: str, body: TransitionIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), roles: tuple[str, ...] = Depends(actor_roles), session: Session = Depends(db_session)):
     _finance_role(roles)
     try:
-        row = transition_invoice(session, tid, invoice_id, actor, body.target, provider_ref=body.provider_ref, manual_evidence=body.manual_evidence); session.commit(); return model_dict(row)
+        row = transition_invoice(session, tid, invoice_id, actor, body.target, provider_ref=body.provider_ref, manual_evidence=body.manual_evidence); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -327,7 +327,7 @@ def billing_events(tid: str = Depends(tenant_id), session: Session = Depends(db_
 @router.post("/v1/commercial/onboardings", status_code=201)
 def onboarding_create(body: OnboardingIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
     try:
-        row = create_onboarding(session, tid, actor, **body.model_dump()); session.commit(); return model_dict(row)
+        row = create_onboarding(session, tid, actor, **body.model_dump()); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -339,14 +339,14 @@ def onboarding_list(tid: str = Depends(tenant_id), session: Session = Depends(db
 @router.patch("/v1/commercial/onboardings/{onboarding_id}/checklist")
 def onboarding_checklist(onboarding_id: str, body: ChecklistIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
     try:
-        row = update_onboarding_checklist(session, tid, onboarding_id, actor, body.updates); session.commit(); return model_dict(row)
+        row = update_onboarding_checklist(session, tid, onboarding_id, actor, body.updates); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
 @router.post("/v1/commercial/onboardings/{onboarding_id}/transition")
 def onboarding_transition(onboarding_id: str, body: TransitionIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
     try:
-        row = transition_onboarding(session, tid, onboarding_id, actor, body.target); session.commit(); return model_dict(row)
+        row = transition_onboarding(session, tid, onboarding_id, actor, body.target); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -358,7 +358,7 @@ def onboarding_schema():
 @router.post("/v1/support/tickets", status_code=201)
 def support_create(body: SupportIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
     try:
-        row = create_support_ticket(session, tid, actor, **body.model_dump()); session.commit(); return model_dict(row)
+        row = create_support_ticket(session, tid, actor, **body.model_dump()); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -371,7 +371,7 @@ def support_list(tid: str = Depends(tenant_id), session: Session = Depends(db_se
 def support_update(ticket_id: str, body: SupportUpdateIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), roles: tuple[str, ...] = Depends(actor_roles), session: Session = Depends(db_session)):
     if not set(roles).intersection({"owner", "operations_owner", "support_owner"}): raise HTTPException(403, "operations or support role is required")
     try:
-        row = update_support_ticket(session, tid, ticket_id, actor, **body.model_dump()); session.commit(); return model_dict(row)
+        row = update_support_ticket(session, tid, ticket_id, actor, **body.model_dump()); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -379,7 +379,7 @@ def support_update(ticket_id: str, body: SupportUpdateIn, tid: str = Depends(ten
 def status_incident_create(body: StatusIncidentIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), roles: tuple[str, ...] = Depends(actor_roles), session: Session = Depends(db_session)):
     if not set(roles).intersection({"owner", "operations_owner", "platform_owner"}): raise HTTPException(403, "operations or platform role is required")
     try:
-        row = create_status_incident(session, tid, actor, **body.model_dump()); session.commit(); return model_dict(row)
+        row = create_status_incident(session, tid, actor, **body.model_dump()); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -392,14 +392,14 @@ def status_incident_list(tid: str = Depends(tenant_id), session: Session = Depen
 def status_incident_update(incident_id: str, body: StatusIncidentUpdateIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), roles: tuple[str, ...] = Depends(actor_roles), session: Session = Depends(db_session)):
     if not set(roles).intersection({"owner", "operations_owner", "platform_owner"}): raise HTTPException(403, "operations or platform role is required")
     try:
-        row = update_status_incident(session, tid, incident_id, actor, **body.model_dump()); session.commit(); return model_dict(row)
+        row = update_status_incident(session, tid, incident_id, actor, **body.model_dump()); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
 @router.post("/v1/compliance/documents", status_code=201)
 def compliance_publish(body: ComplianceIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), roles: tuple[str, ...] = Depends(actor_roles), session: Session = Depends(db_session)):
     if not set(roles).intersection({"owner", "privacy_owner", "legal_owner"}): raise HTTPException(403, "privacy or legal role is required")
-    row = publish_compliance_document(session, tid, actor, **body.model_dump()); session.commit(); return model_dict(row)
+    row = publish_compliance_document(session, tid, actor, **body.model_dump()); return model_dict(row)
 
 
 @router.get("/v1/compliance/documents")
@@ -410,7 +410,7 @@ def compliance_list(tid: str = Depends(tenant_id), session: Session = Depends(db
 @router.post("/v1/compliance/documents/{document_id}/accept", status_code=201)
 def compliance_accept(document_id: str, body: AgreementIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
     try:
-        row = accept_compliance_document(session, tid, actor, document_id, body.evidence); session.commit(); return model_dict(row)
+        row = accept_compliance_document(session, tid, actor, document_id, body.evidence); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -421,7 +421,7 @@ def agreement_list(tid: str = Depends(tenant_id), session: Session = Depends(db_
 
 @router.post("/v1/commercial/value-metrics", status_code=201)
 def value_metric_create(body: ValueMetricIn, tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-    row = record_value_metric(session, tid, **body.model_dump()); session.commit(); return model_dict(row)
+    row = record_value_metric(session, tid, **body.model_dump()); return model_dict(row)
 
 
 @router.get("/v1/commercial/value-metrics")
@@ -436,7 +436,7 @@ def ga_schema():
 
 @router.post("/v1/ga/programs", status_code=201)
 def ga_program_create(body: GAProgramIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
-    row = create_ga_program(session, tid, actor, **body.model_dump()); session.commit(); return model_dict(row)
+    row = create_ga_program(session, tid, actor, **body.model_dump()); return model_dict(row)
 
 
 @router.get("/v1/ga/programs")
@@ -447,7 +447,7 @@ def ga_program_list(tid: str = Depends(tenant_id), session: Session = Depends(db
 @router.post("/v1/ga/programs/{program_id}/evidence", status_code=201)
 def ga_evidence_submit(program_id: str, body: GAEvidenceIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
     try:
-        row = submit_ga_evidence(session, tid, program_id, actor, **body.model_dump()); session.commit(); return model_dict(row)
+        row = submit_ga_evidence(session, tid, program_id, actor, **body.model_dump()); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -462,7 +462,7 @@ def ga_evidence_list(program_id: str, gate: str | None = None, tid: str = Depend
 def ga_evidence_decide(evidence_id: str, body: EvidenceDecisionIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), roles: tuple[str, ...] = Depends(actor_roles), session: Session = Depends(db_session)):
     if not set(roles).intersection({"owner", "product_owner", "security_owner", "privacy_owner", "operations_owner", "finance_owner"}): raise HTTPException(403, "accountable owner role is required")
     try:
-        row = verify_ga_evidence(session, tid, evidence_id, actor, **body.model_dump()); session.commit(); return model_dict(row)
+        row = verify_ga_evidence(session, tid, evidence_id, actor, **body.model_dump()); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -470,7 +470,7 @@ def ga_evidence_decide(evidence_id: str, body: EvidenceDecisionIn, tid: str = De
 def ga_attest(program_id: str, body: GAAttestationIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), roles: tuple[str, ...] = Depends(actor_roles), session: Session = Depends(db_session)):
     if body.role not in roles: raise HTTPException(403, f"token does not contain attestation role {body.role}")
     try:
-        row = attest_ga_gate(session, tid, program_id, actor, **body.model_dump()); session.commit(); return model_dict(row)
+        row = attest_ga_gate(session, tid, program_id, actor, **body.model_dump()); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -503,7 +503,7 @@ def ga_report(program_id: str, tid: str = Depends(tenant_id), session: Session =
 def pricing_approval_create(body: PricingApprovalIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), roles: tuple[str, ...] = Depends(actor_roles), session: Session = Depends(db_session)):
     if not set(roles).intersection({"finance_owner", "product_owner"}): raise HTTPException(403, "finance_owner or product_owner role is required")
     try:
-        row = approve_pricing(session, tid, actor, approver_role=body.approver_role, decision=body.decision, contract_ref=body.contract_ref, notes=body.notes); session.commit(); return model_dict(row)
+        row = approve_pricing(session, tid, actor, approver_role=body.approver_role, decision=body.decision, contract_ref=body.contract_ref, notes=body.notes); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -543,7 +543,7 @@ def billing_webhook(request: Request, body: dict[str, Any]):
 def model_agreement_create(body: ModelAgreementIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), roles: tuple[str, ...] = Depends(actor_roles), session: Session = Depends(db_session)):
     if not set(roles).intersection({"owner", "platform_owner"}): raise HTTPException(403, "owner or platform_owner role is required")
     try:
-        row = create_model_agreement(session, tid, actor, **body.model_dump()); session.commit(); return model_dict(row)
+        row = create_model_agreement(session, tid, actor, **body.model_dump()); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -559,7 +559,7 @@ def model_agreement_list(tid: str = Depends(tenant_id), session: Session = Depen
 def pentest_report_create(body: PentestReportIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), roles: tuple[str, ...] = Depends(actor_roles), session: Session = Depends(db_session)):
     if not set(roles).intersection({"owner", "security_owner"}): raise HTTPException(403, "owner or security_owner role is required")
     try:
-        row = create_pentest_report(session, tid, actor, **body.model_dump()); session.commit(); return model_dict(row)
+        row = create_pentest_report(session, tid, actor, **body.model_dump()); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -575,7 +575,7 @@ def pentest_report_list(tid: str = Depends(tenant_id), session: Session = Depend
 def legal_review_create(document_id: str, body: LegalReviewIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), roles: tuple[str, ...] = Depends(actor_roles), session: Session = Depends(db_session)):
     if not set(roles).intersection({"legal_owner", "privacy_owner"}): raise HTTPException(403, "legal_owner or privacy_owner role is required")
     try:
-        row = approve_legal_document(session, tid, actor, document_id, reviewer_role=body.reviewer_role, decision=body.decision, jurisdiction=body.jurisdiction, notes=body.notes); session.commit(); return model_dict(row)
+        row = approve_legal_document(session, tid, actor, document_id, reviewer_role=body.reviewer_role, decision=body.decision, jurisdiction=body.jurisdiction, notes=body.notes); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -591,7 +591,7 @@ def legal_review_list(tid: str = Depends(tenant_id), session: Session = Depends(
 def oncall_schedule_create(body: OncallScheduleIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), roles: tuple[str, ...] = Depends(actor_roles), session: Session = Depends(db_session)):
     if not set(roles).intersection({"owner", "operations_owner"}): raise HTTPException(403, "owner or operations_owner role is required")
     try:
-        row = create_schedule(session, tid, actor, **body.model_dump()); session.commit(); return model_dict(row)
+        row = create_schedule(session, tid, actor, **body.model_dump()); return model_dict(row)
     except (CommercialError, OnCallError) as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -604,7 +604,7 @@ def oncall_schedule_list(tid: str = Depends(tenant_id), session: Session = Depen
 def oncall_shift_create(schedule_id: str, body: OncallShiftIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), roles: tuple[str, ...] = Depends(actor_roles), session: Session = Depends(db_session)):
     if not set(roles).intersection({"owner", "operations_owner"}): raise HTTPException(403, "owner or operations_owner role is required")
     try:
-        row = create_shift(session, tid, actor, schedule_id=schedule_id, **body.model_dump()); session.commit(); return model_dict(row)
+        row = create_shift(session, tid, actor, schedule_id=schedule_id, **body.model_dump()); return model_dict(row)
     except (CommercialError, OnCallError) as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -622,7 +622,7 @@ def oncall_current(tid: str = Depends(tenant_id), session: Session = Depends(db_
 def oncall_escalation_policy_create(body: EscalationPolicyIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), roles: tuple[str, ...] = Depends(actor_roles), session: Session = Depends(db_session)):
     if not set(roles).intersection({"owner", "operations_owner"}): raise HTTPException(403, "owner or operations_owner role is required")
     try:
-        row = set_escalation_policy(session, tid, actor, **body.model_dump()); session.commit(); return model_dict(row)
+        row = set_escalation_policy(session, tid, actor, **body.model_dump()); return model_dict(row)
     except (CommercialError, OnCallError) as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -642,7 +642,7 @@ def oncall_coverage(tid: str = Depends(tenant_id), session: Session = Depends(db
 @router.patch("/v1/commercial/onboardings/{onboarding_id}/design-partner-profile")
 def design_partner_profile_update(onboarding_id: str, body: DesignPartnerProfileIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
     try:
-        row = update_design_partner_profile(session, tid, onboarding_id, actor, body.profile); session.commit(); return model_dict(row)
+        row = update_design_partner_profile(session, tid, onboarding_id, actor, body.profile); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
@@ -653,14 +653,14 @@ def design_partner_profile_update(onboarding_id: str, body: DesignPartnerProfile
 def observation_window_start(program_id: str, body: ObservationWindowIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), roles: tuple[str, ...] = Depends(actor_roles), session: Session = Depends(db_session)):
     if not set(roles).intersection({"owner", "product_owner"}): raise HTTPException(403, "owner or product_owner role is required")
     try:
-        row = start_observation_window(session, tid, actor, program_id, days=body.days); session.commit(); return model_dict(row)
+        row = start_observation_window(session, tid, actor, program_id, days=body.days); return model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 
 @router.post("/v1/ga/programs/{program_id}/observation-window/check")
 def observation_window_check(program_id: str, tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
     try:
-        row = check_observation_window(session, tid, program_id); session.commit(); return None if not row else model_dict(row)
+        row = check_observation_window(session, tid, program_id); return None if not row else model_dict(row)
     except CommercialError as exc: raise HTTPException(422, str(exc)) from exc
 
 

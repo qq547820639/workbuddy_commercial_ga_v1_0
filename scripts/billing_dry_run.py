@@ -28,7 +28,7 @@ from sqlalchemy.orm import Session
 
 from workbuddy.db.models import BillingEvent
 from workbuddy.db.session import SessionLocal, apply_tenant_context, init_db
-from workbuddy.services.billing.tax_engine import calculate_tax
+from workbuddy.services.payments.tax_engine import calculate_tax
 from workbuddy.services.commercial import (
     active_subscription,
     build_invoice,

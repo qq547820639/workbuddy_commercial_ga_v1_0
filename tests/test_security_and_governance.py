@@ -5,8 +5,8 @@ from io import BytesIO
 from sqlalchemy import select
 
 from workbuddy.db.models import Mission, TeamConstitutionVersion, TeamDefinition, Tenant
-from workbuddy.services.business import (
-    BusinessError,
+from workbuddy.services._transitions import BusinessError
+from workbuddy.services.constitution_service import (
     approve_constitution,
     create_constitution_draft,
     publish_constitution,

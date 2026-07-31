@@ -24,11 +24,13 @@ from workbuddy.db.models import (
 )
 from workbuddy.db.session import make_engine
 from workbuddy.services.audit import append_audit, verify_audit_chain
-from workbuddy.services.business import (
-    BusinessError, ConflictError, accept_mission, approve_plan, confirm_dispatch, create_dispatch,
-    decide_approval, ingest_mail, lead_review_mission, plan_mission,
-    request_collaboration, respond_collaboration, review_work_item, start_execution, start_work_item, submit_agent_run,
+from workbuddy.services._transitions import BusinessError, ConflictError
+from workbuddy.services.mission_service import (
+    accept_mission, approve_plan, confirm_dispatch, create_dispatch, decide_approval,
+    ingest_mail, lead_review_mission, plan_mission, review_work_item, start_execution,
+    start_work_item, submit_agent_run,
 )
+from workbuddy.services.collaboration_service import request_collaboration, respond_collaboration
 from workbuddy.services.common import content_hash, model_dict, utcnow
 from workbuddy.services.outbox import publish_batch
 from workbuddy.services.seed import seed_all
@@ -179,12 +181,11 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
     @app.post("/v1/skills/upload", status_code=201)
     async def upload_skill(file: UploadFile = File(...), ctx: TenantContext = Depends()):
         release = import_skill(ctx.session, ctx.tenant_id, file.filename or "uploaded-skill.txt", await file.read(), ctx.actor)
-        ctx.session.commit()
         return _serialize(release)
 
     @app.post("/v1/skills/{release_id}/publish")
     def publish_skill_route(release_id: str, ctx: TenantContext = Depends()):
-        release = publish_skill(ctx.session, ctx.tenant_id, release_id, ctx.actor); ctx.session.commit(); return _serialize(release)
+        release = publish_skill(ctx.session, ctx.tenant_id, release_id, ctx.actor); return _serialize(release)
 
     @app.get("/v1/inbox")
     def inbox(ctx: TenantContext = Depends()):
@@ -197,11 +198,11 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
 
     @app.post("/v1/inbox/messages", status_code=201)
     def add_message(payload: MailIn, ctx: TenantContext = Depends()):
-        message = ingest_mail(ctx.session, ctx.tenant_id, payload.model_dump()); ctx.session.commit(); return _serialize(message)
+        message = ingest_mail(ctx.session, ctx.tenant_id, payload.model_dump()); return _serialize(message)
 
     @app.post("/v1/inbox/{mail_id}/dispatch")
     def dispatch(mail_id: str, ctx: TenantContext = Depends()):
-        decision = create_dispatch(ctx.session, ctx.tenant_id, mail_id); ctx.session.commit(); return _serialize(decision)
+        decision = create_dispatch(ctx.session, ctx.tenant_id, mail_id); return _serialize(decision)
 
     @app.get("/v1/dispatch")
     def dispatch_list(ctx: TenantContext = Depends()):
@@ -210,7 +211,7 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
 
     @app.post("/v1/dispatch/{decision_id}/confirm", status_code=201)
     def confirm(decision_id: str, payload: DispatchConfirmIn, ctx: TenantContext = Depends()):
-        mission = confirm_dispatch(ctx.session, ctx.tenant_id, decision_id, payload.team_key, payload.workflow_key, ctx.actor); ctx.session.commit(); return _serialize(mission)
+        mission = confirm_dispatch(ctx.session, ctx.tenant_id, decision_id, payload.team_key, payload.workflow_key, ctx.actor); return _serialize(mission)
 
     @app.get("/v1/missions")
     def missions(status: str | None = None, team_id: str | None = None, ctx: TenantContext = Depends()):
@@ -234,48 +235,48 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
 
     @app.post("/v1/missions/{mission_id}/accept")
     def accept(mission_id: str, payload: VersionAction, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
-        mission = accept_mission(session, tid, mission_id, payload.expected_version, actor); session.commit(); return _serialize(mission)
+        mission = accept_mission(session, tid, mission_id, payload.expected_version, actor); return _serialize(mission)
 
     @app.post("/v1/missions/{mission_id}/plan")
     def plan(mission_id: str, payload: PlanIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
-        mission = plan_mission(session, tid, mission_id, payload.expected_version, payload.workflow_key, actor); session.commit(); return _serialize(mission)
+        mission = plan_mission(session, tid, mission_id, payload.expected_version, payload.workflow_key, actor); return _serialize(mission)
 
     @app.post("/v1/missions/{mission_id}/approve-plan")
     def plan_approve(mission_id: str, payload: VersionAction, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
-        mission = approve_plan(session, tid, mission_id, payload.expected_version, actor); session.commit(); return _serialize(mission)
+        mission = approve_plan(session, tid, mission_id, payload.expected_version, actor); return _serialize(mission)
 
     @app.post("/v1/missions/{mission_id}/start")
     def mission_start(mission_id: str, payload: VersionAction, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
-        mission = start_execution(session, tid, mission_id, payload.expected_version, actor); session.commit(); return _serialize(mission)
+        mission = start_execution(session, tid, mission_id, payload.expected_version, actor); return _serialize(mission)
 
     @app.post("/v1/work-items/{work_item_id}/start", status_code=201)
     def item_start(work_item_id: str, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
-        run = start_work_item(session, tid, work_item_id, actor); session.commit(); return _serialize(run)
+        run = start_work_item(session, tid, work_item_id, actor); return _serialize(run)
 
     @app.post("/v1/agent-runs/{run_id}/submit")
     def run_submit(run_id: str, payload: AgentOutputIn, tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-        run = submit_agent_run(session, tid, run_id, payload.output, payload.evidence); session.commit(); return _serialize(run)
+        run = submit_agent_run(session, tid, run_id, payload.output, payload.evidence); return _serialize(run)
 
     @app.post("/v1/work-items/{work_item_id}/review")
     def item_review(work_item_id: str, payload: WorkItemReviewIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
-        item = review_work_item(session, tid, work_item_id, payload.decision, payload.reason, actor); session.commit(); return _serialize(item)
+        item = review_work_item(session, tid, work_item_id, payload.decision, payload.reason, actor); return _serialize(item)
 
     @app.post("/v1/missions/{mission_id}/lead-review")
     def mission_review(mission_id: str, payload: VersionAction, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
-        mission, approval = lead_review_mission(session, tid, mission_id, payload.expected_version, actor); session.commit(); return {"mission": _serialize(mission), "approval": _serialize(approval) if approval else None}
+        mission, approval = lead_review_mission(session, tid, mission_id, payload.expected_version, actor); return {"mission": _serialize(mission), "approval": _serialize(approval) if approval else None}
 
     @app.patch("/v1/work-items/{work_item_id}")
     def work_item_update(work_item_id: str, payload: WorkItemUpdateIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
         changes = payload.model_dump(exclude={"expected_version"}, exclude_none=True)
-        item = update_work_item(session, tid, work_item_id, payload.expected_version, changes, actor); session.commit(); return _serialize(item)
+        item = update_work_item(session, tid, work_item_id, payload.expected_version, changes, actor); return _serialize(item)
 
     @app.post("/v1/missions/{mission_id}/dependencies", status_code=201)
     def dependency_add(mission_id: str, payload: DependencyIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
-        dep = add_dependency(session, tid, mission_id, payload.work_item_id, payload.depends_on_id, actor); session.commit(); return _serialize(dep)
+        dep = add_dependency(session, tid, mission_id, payload.work_item_id, payload.depends_on_id, actor); return _serialize(dep)
 
     @app.delete("/v1/dependencies/{dependency_id}", status_code=204)
     def dependency_remove(dependency_id: str, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
-        remove_dependency(session, tid, dependency_id, actor); session.commit(); return None
+        remove_dependency(session, tid, dependency_id, actor); return None
 
     @app.get("/v1/tools")
     def tools(tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
@@ -288,7 +289,7 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
 
     @app.post("/v1/agent-runs/{run_id}/tools/{tool_key}/invoke")
     def tool_invoke(run_id: str, tool_key: str, payload: ToolInvokeIn, tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-        call = invoke_tool(session, tid, run_id, tool_key, payload.action, payload.parameters); session.commit(); return _serialize(call)
+        call = invoke_tool(session, tid, run_id, tool_key, payload.action, payload.parameters); return _serialize(call)
 
     @app.get("/v1/collaborations")
     def collaborations(mission_id: str | None = None, tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
@@ -298,11 +299,11 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
 
     @app.post("/v1/missions/{mission_id}/collaborations", status_code=201)
     def collaboration_create(mission_id: str, payload: CollaborationIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
-        item = request_collaboration(session, tid, mission_id, payload.receiving_team_key, payload.objective, payload.expected_artifact, payload.input_scope, actor); session.commit(); return _serialize(item)
+        item = request_collaboration(session, tid, mission_id, payload.receiving_team_key, payload.objective, payload.expected_artifact, payload.input_scope, actor); return _serialize(item)
 
     @app.post("/v1/collaborations/{request_id}/respond")
     def collaboration_respond(request_id: str, payload: CollaborationResponseIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
-        item = respond_collaboration(session, tid, request_id, payload.status, payload.response, actor); session.commit(); return _serialize(item)
+        item = respond_collaboration(session, tid, request_id, payload.status, payload.response, actor); return _serialize(item)
 
     @app.get("/v1/memory")
     def memory(status: str | None = None, tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
@@ -312,11 +313,11 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
 
     @app.post("/v1/memory", status_code=201)
     def memory_create(payload: MemoryProposalIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
-        record = propose_memory(session, tid, payload.mission_id, payload.memory_type, payload.subject_key, payload.content, payload.source_artifact_id, actor); session.commit(); return _serialize(record)
+        record = propose_memory(session, tid, payload.mission_id, payload.memory_type, payload.subject_key, payload.content, payload.source_artifact_id, actor); return _serialize(record)
 
     @app.post("/v1/memory/{record_id}/decision")
     def memory_decision(record_id: str, payload: MemoryDecisionIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
-        record = decide_memory(session, tid, record_id, payload.decision, actor); session.commit(); return _serialize(record)
+        record = decide_memory(session, tid, record_id, payload.decision, actor); return _serialize(record)
 
     @app.get("/v1/approvals")
     def approvals(tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
@@ -324,19 +325,19 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
 
     @app.post("/v1/approvals/{approval_id}/decision")
     def approval_decision(approval_id: str, payload: ApprovalDecisionIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
-        approval = decide_approval(session, tid, approval_id, payload.decision, payload.reason, actor); session.commit(); return _serialize(approval)
+        approval = decide_approval(session, tid, approval_id, payload.decision, payload.reason, actor); return _serialize(approval)
 
     @app.post("/v1/operations", status_code=201)
     def operation_prepare(payload: OperationPrepareIn, tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-        op = prepare_external_operation(session, tid, payload.approval_id, payload.operation_key); session.commit(); return _serialize(op)
+        op = prepare_external_operation(session, tid, payload.approval_id, payload.operation_key); return _serialize(op)
 
     @app.post("/v1/operations/{operation_id}/execute")
     def operation_execute(operation_id: str, payload: OperationExecuteIn, tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-        op = execute_external_operation(session, tid, operation_id, simulate_unknown=payload.simulate_unknown); session.commit(); return _serialize(op)
+        op = execute_external_operation(session, tid, operation_id, simulate_unknown=payload.simulate_unknown); return _serialize(op)
 
     @app.post("/v1/operations/{operation_id}/verify")
     def operation_verify(operation_id: str, payload: OperationVerifyIn, tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-        op = verify_unknown_external_operation(session, tid, operation_id, payload.outcome); session.commit(); return _serialize(op)
+        op = verify_unknown_external_operation(session, tid, operation_id, payload.outcome); return _serialize(op)
 
     @app.get("/v1/operations")
     def operations(tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
@@ -366,13 +367,13 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
             msg = ingest_mail(ctx.session, ctx.tenant_id, sample)
             decision = create_dispatch(ctx.session, ctx.tenant_id, msg.id)
             result.append({"mail_id": msg.id, "dispatch_id": decision.id})
-        ctx.session.commit(); return {"created_or_reused": result}
+        return {"created_or_reused": result}
 
     @app.post("/v1/demo/reset")
     def demo_reset(ctx: TenantContext = Depends()):
         # Preserve organization, workflows and skills; clear operational data in dependency order.
         delete_operational_data(ctx.session, ctx.tenant_id, include_audit=True)
-        ctx.session.commit(); return {"status": "reset", "preserved": ["teams", "constitutions", "workflows", "agents", "skills"]}
+        return {"status": "reset", "preserved": ["teams", "constitutions", "workflows", "agents", "skills"]}
 
     @app.post("/v1/scheduler/tick")
     def scheduler_run(ctx: TenantContext = Depends()):
@@ -397,7 +398,7 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
 
     @app.post("/v1/controls")
     def control_change(payload: ControlIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
-        row = set_control(session, tid, payload.scope_type, payload.scope_id, payload.paused, payload.reason, actor); session.commit(); return _serialize(row)
+        row = set_control(session, tid, payload.scope_type, payload.scope_id, payload.paused, payload.reason, actor); return _serialize(row)
 
     @app.get("/v1/privacy/export")
     def privacy_export(ctx: TenantContext = Depends()):
@@ -416,7 +417,6 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
         preserved_audit_count = ctx.session.scalar(select(func.count()).select_from(AuditEvent).where(AuditEvent.tenant_id == ctx.tenant_id)) or 0
         delete_operational_data(ctx.session, ctx.tenant_id)
         append_audit(ctx.session, tenant_id=ctx.tenant_id, actor_type="user", actor_id=ctx.actor, action="privacy.operational_data_deleted", aggregate_type="tenant", aggregate_id=ctx.tenant_id, payload={"audit_events_preserved_before_delete": preserved_audit_count})
-        ctx.session.commit()
         return {"deleted": True, "audit_preserved": True, "organization_configuration_preserved": True}
 
     gmail = GmailConnector()
@@ -446,7 +446,6 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
                 session.add(binding)
             else:
                 binding.tenant_id = claims["tenant_id"]; binding.account_id = account.id; binding.active = True
-            session.commit()
             return RedirectResponse(url="/?gmail=connected")
         except Exception as exc:
             raise HTTPException(400, f"Gmail connection failed: {exc}") from exc
@@ -474,11 +473,11 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
             account.cursor = str(profile.get("historyId", account.cursor or "")) or account.cursor
             account.status = "active"; account.sync_status = "idle"; account.last_synced_at = utcnow(); account.last_error = None
             run.status = "SUCCEEDED"; run.cursor_after = account.cursor; run.created_count = created; run.reused_count = reused; run.finished_at = utcnow()
-            session.commit()
             return _serialize(run)
         except Exception as exc:
             account.status = "error"; account.sync_status = "error"; account.last_error = str(exc)
-            run.status = "FAILED"; run.error = str(exc); run.finished_at = utcnow(); session.commit()
+            run.status = "FAILED"; run.error = str(exc); run.finished_at = utcnow()
+            session.commit()  # persist failure diagnostic before raising (unit_of_work would rollback)
             raise HTTPException(502, f"Gmail sync failed: {exc}") from exc
 
     @app.post("/v1/connectors/gmail/accounts/{account_id}/watch")
@@ -493,7 +492,6 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
             if result.get("expiration"):
                 from datetime import datetime, timezone
                 account.watch_expires_at = datetime.fromtimestamp(int(result["expiration"]) / 1000, tz=timezone.utc)
-            session.commit()
             return {"history_id": account.cursor, "expiration": account.watch_expires_at.isoformat() if account.watch_expires_at else None}
         except Exception as exc:
             raise HTTPException(502, f"Gmail watch registration failed: {exc}") from exc
@@ -529,7 +527,7 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
         event = ProviderWebhookEvent(tenant_id=account.tenant_id, provider="gmail", provider_event_id=event_id, payload_hash=content_hash(envelope), status="RECEIVED")
         session.add(event); session.flush()
         if not account.cursor:
-            account.cursor = latest_notice; event.status = "CURSOR_INITIALIZED"; session.commit(); return {"accepted": True, "initialized_cursor": latest_notice}
+            account.cursor = latest_notice; event.status = "CURSOR_INITIALIZED"; return {"accepted": True, "initialized_cursor": latest_notice}
         run = SyncRun(tenant_id=account.tenant_id, account_id=account.id, provider="gmail", sync_type="history", status="RUNNING", cursor_before=account.cursor)
         session.add(run); account.sync_status = "running"
         try:
@@ -553,12 +551,11 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
                                  payload={"provider_message_id": message.provider_message_id})
             account.cursor = latest or latest_notice; account.status = "active"; account.sync_status = "idle"; account.last_synced_at = utcnow(); account.last_error = None
             run.status = "SUCCEEDED"; run.cursor_after = account.cursor; run.created_count = created; run.reused_count = reused; run.deleted_count = deleted; run.finished_at = utcnow(); event.status = "PROCESSED"
-            session.commit()
             return {"accepted": True, "created": created, "reused": reused, "deleted": deleted, "cursor": account.cursor}
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code == 404:
                 account.status = "RESYNC_REQUIRED"; account.sync_status = "error"; account.last_error = "history cursor expired"
-                run.status = "FAILED"; run.error = "history cursor expired"; run.finished_at = utcnow(); event.status = "RESYNC_REQUIRED"; session.commit()
+                run.status = "FAILED"; run.error = "history cursor expired"; run.finished_at = utcnow(); event.status = "RESYNC_REQUIRED"
                 return {"accepted": True, "status": "RESYNC_REQUIRED"}
             run.status = "FAILED"; run.error = str(exc); run.finished_at = utcnow(); event.status = "FAILED"; session.commit(); raise
 

@@ -6,11 +6,10 @@ from urllib.parse import urlencode
 import httpx
 import jwt
 import json
-from cryptography.fernet import Fernet
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from workbuddy.connectors.base import BaseMailConnector
 from workbuddy.db.models import MailAccount
-from workbuddy.settings import Settings, settings
 
 GRAPH_ROOT = "https://graph.microsoft.com/v1.0"
 READ_SCOPES = "openid offline_access User.Read Mail.Read"
@@ -21,12 +20,8 @@ class GraphNotConfigured(RuntimeError):
     pass
 
 
-class MicrosoftGraphConnector:
+class MicrosoftGraphConnector(BaseMailConnector):
     """Microsoft Graph adapter with folder-scoped delta cursors and separately gated send scope."""
-
-    def __init__(self, cfg: Settings = settings):
-        self.cfg = cfg
-        self.cipher = Fernet(cfg.fernet_key)
 
     @property
     def configured(self):
@@ -49,9 +44,6 @@ class MicrosoftGraphConnector:
             "scope": scope,
             "state": state,
         })
-
-    def decode_state(self, state: str) -> dict:
-        return jwt.decode(state, self.cfg.app_secret, algorithms=["HS256"])
 
     def exchange_code(self, code: str, enable_send: bool = False) -> dict:
         if not self.configured:

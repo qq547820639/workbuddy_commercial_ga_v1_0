@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from workbuddy.connectors.microsoft_graph import MicrosoftGraphConnector
 from workbuddy.db.models import MailAccount, MailMessage, SyncRun
 from .audit import append_audit
-from .business import ingest_mail
+from .mission_service import ingest_mail
 from .common import utcnow
 
 

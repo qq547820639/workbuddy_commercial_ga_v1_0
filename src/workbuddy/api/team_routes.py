@@ -12,10 +12,13 @@ from workbuddy.db.models import (
     AgentProfile, ApprovalRequest, CollaborationRequest, MemoryRecord, Mission,
     SkillDefinition, SkillRelease, TeamConstitutionVersion, TeamDefinition, WorkItem,
 )
-from workbuddy.services.business import (
-    accept_collaboration, approve_constitution, complete_collaboration_with_artifact,
-    create_constitution_draft, decline_collaboration, publish_constitution,
-    start_collaboration_work, submit_constitution_for_review,
+from workbuddy.services.collaboration_service import (
+    accept_collaboration, complete_collaboration_with_artifact, decline_collaboration,
+    start_collaboration_work,
+)
+from workbuddy.services.constitution_service import (
+    approve_constitution, create_constitution_draft, publish_constitution,
+    submit_constitution_for_review,
 )
 from workbuddy.services.common import model_dict, naive_utc
 
@@ -288,7 +291,6 @@ def collaboration_accept(
     team = _resolve_team(session, tid, team_key)
     _get_team_collaboration(session, tid, team, collaboration_id)
     request = accept_collaboration(session, collaboration_id, actor)
-    session.commit()
     return model_dict(request)
 
 
@@ -301,7 +303,6 @@ def collaboration_decline(
     team = _resolve_team(session, tid, team_key)
     _get_team_collaboration(session, tid, team, collaboration_id)
     request = decline_collaboration(session, collaboration_id, actor, body.reason)
-    session.commit()
     return model_dict(request)
 
 
@@ -314,7 +315,6 @@ def collaboration_start(
     team = _resolve_team(session, tid, team_key)
     _get_team_collaboration(session, tid, team, collaboration_id)
     request = start_collaboration_work(session, collaboration_id)
-    session.commit()
     return model_dict(request)
 
 
@@ -327,7 +327,6 @@ def collaboration_complete(
     team = _resolve_team(session, tid, team_key)
     _get_team_collaboration(session, tid, team, collaboration_id)
     request = complete_collaboration_with_artifact(session, collaboration_id, body.artifact_id, actor)
-    session.commit()
     return model_dict(request)
 
 
@@ -339,7 +338,6 @@ def constitution_draft(
 ):
     team = _resolve_team(session, tid, team_key)
     draft = create_constitution_draft(session, team.id, body.config, actor)
-    session.commit()
     return model_dict(draft)
 
 
@@ -351,7 +349,6 @@ def constitution_submit_review(
 ):
     _get_tenant_constitution(session, tid, constitution_version_id)
     constitution = submit_constitution_for_review(session, constitution_version_id, actor)
-    session.commit()
     return model_dict(constitution)
 
 
@@ -363,7 +360,6 @@ def constitution_approve(
 ):
     _get_tenant_constitution(session, tid, constitution_version_id)
     constitution = approve_constitution(session, constitution_version_id, actor)
-    session.commit()
     return model_dict(constitution)
 
 
@@ -375,7 +371,6 @@ def constitution_publish(
 ):
     _get_tenant_constitution(session, tid, constitution_version_id)
     constitution = publish_constitution(session, constitution_version_id, actor)
-    session.commit()
     return model_dict(constitution)
 
 

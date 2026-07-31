@@ -481,7 +481,7 @@ def test_graph_read_only_token_refresh_does_not_request_send_scope(monkeypatch):
 
 
 def test_mail_upsert_updates_provider_state_and_revives_soft_deleted_message(client):
-    from workbuddy.services.business import ingest_mail
+    from workbuddy.services.mission_service import ingest_mail
 
     with client.app.state.SessionLocal() as session:
         message = ingest_mail(session, TENANT, {
@@ -517,7 +517,7 @@ def test_mail_upsert_updates_provider_state_and_revives_soft_deleted_message(cli
 
 
 def test_inbox_hides_provider_deleted_messages(client):
-    from workbuddy.services.business import ingest_mail
+    from workbuddy.services.mission_service import ingest_mail
 
     with client.app.state.SessionLocal() as session:
         message = ingest_mail(session, TENANT, {
@@ -535,7 +535,7 @@ def test_inbox_hides_provider_deleted_messages(client):
 
 
 def test_graph_delta_soft_marks_provider_deletion(client):
-    from workbuddy.services.business import ingest_mail
+    from workbuddy.services.mission_service import ingest_mail
     from workbuddy.services.mail_sync import sync_graph_folder
 
     class FakeGraphDelta:

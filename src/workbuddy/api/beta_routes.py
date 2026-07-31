@@ -19,7 +19,7 @@ from workbuddy.db.models import (
     TenantPolicy, WebhookBinding,
 )
 from workbuddy.services.audit import append_audit
-from workbuddy.services.business import ingest_mail
+from workbuddy.services.mission_service import ingest_mail
 from workbuddy.services.common import content_hash, model_dict, utcnow
 from workbuddy.services.executor import execute_agent_run
 from workbuddy.services.mail_sync import MailSyncError, sync_graph_folder
@@ -39,7 +39,6 @@ def serialize(obj: Any) -> dict[str, Any]:
 def execute_run(run_id: str, _payload: AgentExecuteIn, tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
     require_tenant(session, tid)
     run = execute_agent_run(session, tid, run_id)
-    session.commit()
     if (run.close_reason or "").startswith("failed:"):
         raise HTTPException(status_code=502, detail={
             "message": "AgentRun failed; the failure record was persisted and the WorkItem was blocked.",
@@ -55,7 +54,6 @@ def execute_run(run_id: str, _payload: AgentExecuteIn, tid: str = Depends(tenant
 @router.post("/v1/skills/{release_id}/test")
 def test_skill(release_id: str, payload: SkillTestIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
     release = test_skill_release(session, tid, release_id, actor, payload.test_input)
-    session.commit()
     return serialize(release)
 
 
@@ -128,7 +126,6 @@ def add_dispatch_feedback(
     append_audit(session, tenant_id=tid, actor_type="user", actor_id=actor, action="dispatch.feedback_recorded",
                  aggregate_type="dispatch_decision", aggregate_id=decision.id,
                  payload={"confirmed_team_id": team.id, "corrected_risk_level": payload.corrected_risk_level})
-    session.commit()
     return serialize(row)
 
 
@@ -142,7 +139,6 @@ def sync_runs(limit: int = Query(default=200, ge=1, le=1000), tid: str = Depends
 def get_external_email_policy(tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
     require_tenant(session, tid)
     policy = ensure_default_policies(session, tid)
-    session.commit()
     return serialize(policy)
 
 
@@ -168,7 +164,6 @@ def update_external_email_policy(
     append_audit(session, tenant_id=tid, actor_type="user", actor_id=actor, action="policy.external_email_updated",
                  aggregate_type="tenant_policy", aggregate_id=policy.id, aggregate_version=policy.version,
                  payload={"changed_fields": sorted(payload.config)})
-    session.commit()
     return serialize(policy)
 
 
@@ -226,7 +221,6 @@ def beta_readiness(tid: str = Depends(tenant_id), session: Session = Depends(db_
         checks["deployment_recipient_allowlist"], checks["tenant_recipient_allowlist"],
     ])
     gate_d = gate_d_preflight and checks["verified_live_send_observed"]
-    session.commit()  # persist the default tenant policy when this is the first readiness check
     return {
         "environment": settings.environment,
         "checks": checks,
@@ -262,7 +256,6 @@ def graph_callback(code: str, state: str, session: Session = Depends(db_session)
         account = graph.save_credentials(session, claims["tenant_id"], address, token)
         # Folder-scoped delta cursors are stored as an opaque JSON map.
         account.cursor = json.dumps({"inbox": None, "sentitems": None})
-        session.commit()
         return RedirectResponse(url="/?graph=connected")
     except Exception as exc:
         raise HTTPException(400, f"Microsoft Graph connection failed: {exc}") from exc
@@ -287,10 +280,8 @@ def graph_sync(
         raise HTTPException(404, "Microsoft Graph account not found")
     try:
         run = sync_graph_folder(session, tid, account, folder_id=folder_id, connector=graph)
-        session.commit()
         return serialize(run)
     except MailSyncError as exc:
-        session.commit()
         raise HTTPException(502, f"Microsoft Graph sync failed: {exc}") from exc
 
 
@@ -331,11 +322,10 @@ def graph_watch(account_id: str, tid: str = Depends(tenant_id), session: Session
             account.watch_expires_at = datetime.fromisoformat(expiration.replace("Z", "+00:00"))
         account.status = "active"
         account.last_error = None
-        session.commit()
         return {"subscription_id": account.provider_subscription_id, "expiration": account.watch_expires_at, "resource": account.subscription_resource}
     except Exception as exc:
         account.last_error = str(exc)
-        session.commit()
+        session.commit()  # persist error diagnostic before raising (unit_of_work would rollback)
         raise HTTPException(502, f"Microsoft Graph subscription failed: {exc}") from exc
 
 
@@ -389,7 +379,6 @@ async def graph_webhook_receive(request: Request, session: Session = Depends(db_
         # the resolved tenant context is active before switching to the next binding.
         session.flush()
         accepted += 1
-    session.commit()
     return {"accepted": accepted, "duplicates": duplicates, "rejected": rejected, "note": "Notifications schedule folder delta sync; delta remains the source of truth."}
 
 

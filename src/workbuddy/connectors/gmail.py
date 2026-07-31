@@ -9,12 +9,11 @@ from urllib.parse import urlencode
 
 import httpx
 import jwt
-from cryptography.fernet import Fernet
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from workbuddy.connectors.base import BaseMailConnector
 from workbuddy.db.models import MailAccount
-from workbuddy.settings import Settings, settings
 
 
 GMAIL_READ_SCOPE = "https://www.googleapis.com/auth/gmail.readonly"
@@ -26,11 +25,7 @@ class GmailNotConfigured(RuntimeError):
     pass
 
 
-class GmailConnector:
-    def __init__(self, cfg: Settings = settings):
-        self.cfg = cfg
-        self.cipher = Fernet(cfg.fernet_key)
-
+class GmailConnector(BaseMailConnector):
     @property
     def configured(self) -> bool:
         return bool(self.cfg.gmail_client_id and self.cfg.gmail_client_secret)
@@ -50,9 +45,6 @@ class GmailConnector:
             "state": state,
         })
         return f"https://accounts.google.com/o/oauth2/v2/auth?{query}"
-
-    def decode_state(self, state: str) -> dict:
-        return jwt.decode(state, self.cfg.app_secret, algorithms=["HS256"])
 
     def exchange_code(self, code: str) -> dict:
         if not self.configured:

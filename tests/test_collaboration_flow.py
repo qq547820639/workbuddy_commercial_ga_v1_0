@@ -4,8 +4,8 @@ from sqlalchemy import select
 
 from workbuddy.db.models import Artifact, CollaborationRequest, Mission, TeamDefinition
 from workbuddy.domain.state_machine import CollaborationRequestStatus
-from workbuddy.services.business import (
-    BusinessError,
+from workbuddy.services._transitions import BusinessError
+from workbuddy.services.collaboration_service import (
     accept_collaboration,
     complete_collaboration_with_artifact,
     decline_collaboration,

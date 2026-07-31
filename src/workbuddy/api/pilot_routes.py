@@ -117,7 +117,7 @@ def list_programs(tid: str = Depends(tenant_id), session: Session = Depends(db_s
 def create_program_route(body: PilotProgramIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
     require_tenant(session, tid)
     try:
-        row = create_program(session, tid, actor, **body.model_dump()); session.commit(); return model_dict(row)
+        row = create_program(session, tid, actor, **body.model_dump()); return model_dict(row)
     except PilotError as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -125,7 +125,7 @@ def create_program_route(body: PilotProgramIn, tid: str = Depends(tenant_id), ac
 @router.post("/v1/pilot-programs/{program_id}/transition")
 def transition_program_route(program_id: str, body: TransitionIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
     try:
-        row = transition_program(session, tid, program_id, actor, body.target); session.commit(); return model_dict(row)
+        row = transition_program(session, tid, program_id, actor, body.target); return model_dict(row)
     except PilotError as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -150,7 +150,7 @@ def register_mailbox_route(program_id: str, body: PilotMailboxIn, tid: str = Dep
             allowed_addresses=body.allowed_recipient_addresses,
             daily_send_limit=body.daily_send_limit,
         )
-        session.commit(); return model_dict(row)
+        return model_dict(row)
     except PilotError as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -188,7 +188,7 @@ async def upload_evidence_artifact(
             metrics={"artifact_sha256": stored.sha256, "artifact_size": stored.size, "content_type": stored.content_type},
             artifact_ref=stored.ref,
         )
-        session.commit(); return model_dict(row)
+        return model_dict(row)
     except (PilotError, ObjectStoreError) as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -196,7 +196,7 @@ async def upload_evidence_artifact(
 @router.post("/v1/pilot-programs/{program_id}/evidence", status_code=201)
 def submit_evidence_route(program_id: str, body: EvidenceIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
     try:
-        row = submit_evidence(session, tid, program_id, actor, **body.model_dump()); session.commit(); return model_dict(row)
+        row = submit_evidence(session, tid, program_id, actor, **body.model_dump()); return model_dict(row)
     except PilotError as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -206,7 +206,7 @@ def verify_evidence_route(evidence_id: str, body: EvidenceDecisionIn, tid: str =
     if not set(roles).intersection({"security_owner", "platform_owner", "privacy_owner", "operations_owner", "product_owner"}):
         raise HTTPException(403, "evidence verification requires an accountable owner role")
     try:
-        row = verify_evidence(session, tid, evidence_id, actor, decision=body.decision, reason=body.reason); session.commit(); return model_dict(row)
+        row = verify_evidence(session, tid, evidence_id, actor, decision=body.decision, reason=body.reason); return model_dict(row)
     except PilotError as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -214,7 +214,7 @@ def verify_evidence_route(evidence_id: str, body: EvidenceDecisionIn, tid: str =
 @router.post("/v1/pilot-programs/{program_id}/metrics", status_code=201)
 def record_metric_route(program_id: str, body: MetricIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
     try:
-        row = record_daily_metric(session, tid, program_id, actor, **body.model_dump()); session.commit(); return model_dict(row)
+        row = record_daily_metric(session, tid, program_id, actor, **body.model_dump()); return model_dict(row)
     except PilotError as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -228,7 +228,7 @@ def list_metrics(program_id: str, tid: str = Depends(tenant_id), session: Sessio
 @router.post("/v1/pilot-programs/{program_id}/drills", status_code=201)
 def create_drill_route(program_id: str, body: DrillIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
     try:
-        row = create_drill(session, tid, program_id, actor, **body.model_dump()); session.commit(); return model_dict(row)
+        row = create_drill(session, tid, program_id, actor, **body.model_dump()); return model_dict(row)
     except PilotError as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -242,7 +242,7 @@ def list_drills(program_id: str, tid: str = Depends(tenant_id), session: Session
 @router.post("/v1/pilot-programs/drills/{drill_id}/complete")
 def complete_drill_route(drill_id: str, body: DrillCompleteIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
     try:
-        row = complete_drill(session, tid, drill_id, actor, **body.model_dump()); session.commit(); return model_dict(row)
+        row = complete_drill(session, tid, drill_id, actor, **body.model_dump()); return model_dict(row)
     except PilotError as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -252,7 +252,7 @@ def attest_route(program_id: str, body: AttestationIn, tid: str = Depends(tenant
     if body.role not in roles:
         raise HTTPException(403, f"token does not contain attestation role {body.role}")
     try:
-        row = attest_gate(session, tid, program_id, actor, **body.model_dump()); session.commit(); return model_dict(row)
+        row = attest_gate(session, tid, program_id, actor, **body.model_dump()); return model_dict(row)
     except PilotError as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -282,7 +282,7 @@ def report(program_id: str, tid: str = Depends(tenant_id), session: Session = De
 @router.post("/v1/pilot-programs/{program_id}/incidents", status_code=201)
 def incident_route(program_id: str, body: IncidentIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
     try:
-        row = record_incident(session, tid, program_id, actor, **body.model_dump()); session.commit(); return model_dict(row)
+        row = record_incident(session, tid, program_id, actor, **body.model_dump()); return model_dict(row)
     except PilotError as exc:
         raise HTTPException(422, str(exc)) from exc
 
@@ -290,6 +290,6 @@ def incident_route(program_id: str, body: IncidentIn, tid: str = Depends(tenant_
 @router.post("/v1/pilot-programs/incidents/{incident_id}/resolve")
 def resolve_incident_route(incident_id: str, body: IncidentResolveIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
     try:
-        row = resolve_incident(session, tid, incident_id, actor, resolution=body.resolution); session.commit(); return model_dict(row)
+        row = resolve_incident(session, tid, incident_id, actor, resolution=body.resolution); return model_dict(row)
     except PilotError as exc:
         raise HTTPException(422, str(exc)) from exc

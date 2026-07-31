@@ -11,7 +11,7 @@ from workbuddy.db.models import ApprovalRequest, ExternalOperation, MailAccount,
 from workbuddy.domain.state_machine import OPERATION_TRANSITIONS, ExternalOperationStatus, MissionStatus, transition
 from workbuddy.settings import Settings, settings
 from .audit import append_audit
-from .business import BusinessError, ConflictError, _mission_transition
+from ._transitions import BusinessError, ConflictError, _mission_transition
 from .common import content_hash, utcnow
 from .policies import PolicyViolation, email_hashes, validate_email_action
 

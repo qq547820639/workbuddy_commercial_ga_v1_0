@@ -36,12 +36,22 @@ def require_actor_role(request: Request, allowed: set[str]) -> Principal:
 
 
 def db_session(request: Request) -> Generator[Session, None, None]:
+    """Request-scoped DB session acting as the unit of work.
+
+    Commits on success, rolls back on exception, and always closes the session.
+    Route handlers should NOT call ``session.commit()`` explicitly — it is handled
+    here automatically after the route returns.
+    """
     session = request.app.state.SessionLocal()
     try:
         if not is_public_path(request.url.path):
             value = principal(request)
             apply_tenant_context(session, value.tenant_id, local=True)
         yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
     finally:
         session.close()
 

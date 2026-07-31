@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 
 from workbuddy.db.models import AgentProfile, AgentRun, MailMessage, Mission, ModelInvocation, SkillDefinition, SkillRelease, WorkItem
 from workbuddy.domain.state_machine import AgentRunStatus, WorkItemStatus
-from .business import BusinessError, _run_transition, _work_transition, submit_agent_run
+from ._transitions import BusinessError, _run_transition, _work_transition
+from .mission_service import submit_agent_run
 from .common import model_dict, utcnow
 from .model_gateway import ModelGateway, agent_output_schema
 from .tools import revoke_run_grants

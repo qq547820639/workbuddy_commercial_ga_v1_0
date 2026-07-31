@@ -157,7 +157,7 @@ def build_invoice(session: Session, tenant_id: str, actor_id: str, subscription_
         lines.append({"type": "model_cost_overage", "amount_cny_fen": model_overage})
     # Gap 2: Use tax engine when region is specified, otherwise fall back to explicit basis points.
     if tax_region:
-        from workbuddy.services.billing.tax_engine import calculate_tax
+        from workbuddy.services.payments.tax_engine import calculate_tax
         tax, rate_bps, tax_type = calculate_tax(subtotal, tax_region)
     else:
         tax = subtotal * max(0, tax_rate_basis_points) // 10_000
@@ -199,8 +199,8 @@ def transition_invoice(session: Session, tenant_id: str, invoice_id: str, actor_
 
 def verify_billing_webhook(session: Session, tenant_id: str, payload: dict[str, Any], signature: str) -> dict[str, Any]:
     """Gap 2: Verify a billing webhook and trigger invoice payment if valid."""
-    from workbuddy.services.billing import get_billing_provider
-    provider = get_billing_provider(settings)
+    from workbuddy.services.payments import get_payment_provider
+    provider = get_payment_provider(settings)
     try:
         verified = provider.verify_webhook(payload, signature, settings.billing_webhook_secret)
     except Exception as exc:
