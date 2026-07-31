@@ -11,10 +11,13 @@ class GateSigningError(ValueError):
     pass
 
 def _signing_key() -> bytes:
-    """Derive an HMAC signing key from the app secret."""
-    if not settings.app_secret or settings.app_secret.startswith("local-development"):
-        # In production, this would be a per-owner key. For code-scope, we use the app secret.
-        pass
+    """HMAC signing key derived from the application secret.
+
+    NOTE: this is a shared, code-scope key. A production deployment that needs
+    per-owner accountability should source an independent ``owner_signing_key``
+    here instead of reusing ``app_secret``. The previous ``if ...: pass`` branch
+    only documented that intent without implementing it, so it has been removed.
+    """
     return hashlib.sha256(settings.app_secret.encode()).digest()
 
 def _normalize_timestamp(ts) -> str:

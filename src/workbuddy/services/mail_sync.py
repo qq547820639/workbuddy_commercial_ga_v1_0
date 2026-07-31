@@ -95,3 +95,33 @@ def sync_graph_folder(
         run.error = str(exc)
         run.finished_at = utcnow()
         raise MailSyncError(str(exc)) from exc
+
+
+def upsert_gmail_message(
+    session: Session,
+    tenant_id: str,
+    gmail,
+    message_id: str,
+    *,
+    access_token: str,
+    account_id: str,
+    actor: str,
+) -> tuple[int, int]:
+    """Fetch, normalize and ingest a single Gmail message, returning (created, reused).
+
+    Shared by the full sync path and the history/webhook path so the upsert logic
+    lives in exactly one place. ``access_token`` is accepted pre-fetched (callers
+    obtain it once per run) and ``account_id`` is stamped onto the resulting message.
+    """
+    normalized = gmail.normalize_message(gmail.get_message(access_token, message_id))
+    before = session.scalar(
+        select(MailMessage).where(
+            MailMessage.tenant_id == tenant_id,
+            MailMessage.provider_message_id == normalized["provider_message_id"],
+        )
+    )
+    message = ingest_mail(session, tenant_id, normalized, actor=actor)
+    message.account_id = account_id
+    created = 0 if before else 1
+    reused = 1 if before else 0
+    return created, reused

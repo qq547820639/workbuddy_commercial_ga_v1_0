@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Generator
-from fastapi import HTTPException, Request
+from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from workbuddy.db.models import Tenant
@@ -56,3 +56,24 @@ def require_tenant(session: Session, value: str) -> Tenant:
     if not tenant:
         raise HTTPException(status_code=404, detail="tenant not found")
     return tenant
+
+
+class TenantContext:
+    """Bundled tenant-scoped request context for route handlers.
+
+    Replaces the repeated
+    ``tid=Depends(tenant_id), session=Depends(db_session)[, actor=Depends(actor_id)]``
+    + ``require_tenant(session, tid)`` boilerplate found across routes. The tenant
+    existence check is performed once, inside the dependency.
+    """
+
+    def __init__(
+        self,
+        tenant_id: str = Depends(tenant_id),
+        session: Session = Depends(db_session),
+        actor: str = Depends(actor_id),
+    ) -> None:
+        self.tenant_id = tenant_id
+        self.session = session
+        self.actor = actor
+        self.tenant = require_tenant(session, tenant_id)

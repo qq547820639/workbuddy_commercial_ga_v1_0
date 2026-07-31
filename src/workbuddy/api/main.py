@@ -8,10 +8,10 @@ from uuid import uuid4
 from fastapi import Depends, FastAPI, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse
 import httpx
-from sqlalchemy import delete, func, select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, sessionmaker
 
-from workbuddy.api.deps import actor_id, db_session, require_tenant, set_tenant_context, tenant_id
+from workbuddy.api.deps import TenantContext, actor_id, db_session, require_tenant, set_tenant_context, tenant_id
 from workbuddy.api.schemas import (
     AgentOutputIn, ApprovalDecisionIn, CollaborationIn, CollaborationResponseIn, ControlIn, DeleteOperationalDataIn, DependencyIn, DispatchConfirmIn, MailIn, MemoryDecisionIn, MemoryProposalIn, OperationExecuteIn,
     OperationPrepareIn, OperationVerifyIn, PlanIn, ToolInvokeIn, VersionAction, WorkItemReviewIn, WorkItemUpdateIn,
@@ -35,6 +35,8 @@ from workbuddy.services.seed import seed_all
 from workbuddy.services.skills import SkillValidationError, import_skill, publish_skill
 from workbuddy.services.tools import ToolPolicyError, invoke_tool
 from workbuddy.services.governance import GovernanceError, add_dependency, decide_memory, propose_memory, remove_dependency, update_work_item
+from workbuddy.services.lifecycle import delete_operational_data
+from workbuddy.services.mail_sync import upsert_gmail_message
 from workbuddy.services.control import PausedError, set_control
 from workbuddy.services.context import correlation_id_var
 from workbuddy.services.scheduler import scheduler_tick
@@ -136,13 +138,12 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
         return {"mode": settings.auth_mode, "issuer": settings.auth_oidc_issuer, "audience": settings.auth_oidc_audience, "tenant_claim": settings.auth_tenant_claim, "roles_claim": settings.auth_roles_claim}
 
     @app.get("/v1/dashboard")
-    def dashboard(tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-        require_tenant(session, tid)
-        teams = session.scalars(select(TeamDefinition).where(TeamDefinition.tenant_id == tid).order_by(TeamDefinition.name)).all()
+    def dashboard(ctx: TenantContext = Depends()):
+        teams = ctx.session.scalars(select(TeamDefinition).where(TeamDefinition.tenant_id == ctx.tenant_id).order_by(TeamDefinition.name)).all()
         cards = []
         for team in teams:
-            missions = session.scalars(select(Mission).where(Mission.tenant_id == tid, Mission.primary_team_id == team.id)).all()
-            lead = session.scalar(select(AgentProfile).where(AgentProfile.team_id == team.id, AgentProfile.is_lead.is_(True)))
+            missions = ctx.session.scalars(select(Mission).where(Mission.tenant_id == ctx.tenant_id, Mission.primary_team_id == team.id)).all()
+            lead = ctx.session.scalar(select(AgentProfile).where(AgentProfile.team_id == team.id, AgentProfile.is_lead.is_(True)))
             cards.append({
                 "id": team.id, "team_key": team.team_key, "name": team.name,
                 "lead": lead.name if lead else "未配置",
@@ -153,80 +154,70 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
             })
         return {
             "teams": cards,
-            "inbox_pending": session.scalar(select(func.count()).select_from(MailMessage).where(MailMessage.tenant_id == tid, MailMessage.processing_status.in_(["NEW", "DISPATCH_PROPOSED"]))) or 0,
-            "active_runs": session.scalar(select(func.count()).select_from(AgentRun).where(AgentRun.tenant_id == tid, AgentRun.status.in_(["RUNNING", "TOOL_WAIT"]))) or 0,
-            "pending_approvals": session.scalar(select(func.count()).select_from(ApprovalRequest).where(ApprovalRequest.tenant_id == tid, ApprovalRequest.status == "PENDING")) or 0,
-            "outbox_pending": session.scalar(select(func.count()).select_from(OutboxEvent).where(OutboxEvent.tenant_id == tid, OutboxEvent.published_at.is_(None), OutboxEvent.dead_lettered.is_(False))) or 0,
+            "inbox_pending": ctx.session.scalar(select(func.count()).select_from(MailMessage).where(MailMessage.tenant_id == ctx.tenant_id, MailMessage.processing_status.in_(["NEW", "DISPATCH_PROPOSED"]))) or 0,
+            "active_runs": ctx.session.scalar(select(func.count()).select_from(AgentRun).where(AgentRun.tenant_id == ctx.tenant_id, AgentRun.status.in_(["RUNNING", "TOOL_WAIT"]))) or 0,
+            "pending_approvals": ctx.session.scalar(select(func.count()).select_from(ApprovalRequest).where(ApprovalRequest.tenant_id == ctx.tenant_id, ApprovalRequest.status == "PENDING")) or 0,
+            "outbox_pending": ctx.session.scalar(select(func.count()).select_from(OutboxEvent).where(OutboxEvent.tenant_id == ctx.tenant_id, OutboxEvent.published_at.is_(None), OutboxEvent.dead_lettered.is_(False))) or 0,
         }
 
     @app.get("/v1/teams")
-    def teams(tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-        require_tenant(session, tid)
+    def teams(ctx: TenantContext = Depends()):
         result = []
-        for team in session.scalars(select(TeamDefinition).where(TeamDefinition.tenant_id == tid).order_by(TeamDefinition.name)).all():
-            constitution = session.scalar(select(TeamConstitutionVersion).where(TeamConstitutionVersion.team_id == team.id).order_by(TeamConstitutionVersion.version.desc()).limit(1))
-            agents = session.scalars(select(AgentProfile).where(AgentProfile.team_id == team.id).order_by(AgentProfile.is_lead.desc(), AgentProfile.name)).all()
-            workflows = session.scalars(select(WorkflowVersion).where(WorkflowVersion.team_id == team.id).order_by(WorkflowVersion.name)).all()
+        for team in ctx.session.scalars(select(TeamDefinition).where(TeamDefinition.tenant_id == ctx.tenant_id).order_by(TeamDefinition.name)).all():
+            constitution = ctx.session.scalar(select(TeamConstitutionVersion).where(TeamConstitutionVersion.team_id == team.id).order_by(TeamConstitutionVersion.version.desc()).limit(1))
+            agents = ctx.session.scalars(select(AgentProfile).where(AgentProfile.team_id == team.id).order_by(AgentProfile.is_lead.desc(), AgentProfile.name)).all()
+            workflows = ctx.session.scalars(select(WorkflowVersion).where(WorkflowVersion.team_id == team.id).order_by(WorkflowVersion.name)).all()
             result.append({**_serialize(team), "constitution": constitution.config if constitution else None,
                            "agents": [_serialize(a) for a in agents], "workflows": [_serialize(w) for w in workflows]})
         return result
 
     @app.get("/v1/skills")
-    def skills(tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-        require_tenant(session, tid)
-        rows = session.execute(select(SkillDefinition, SkillRelease).join(SkillRelease, SkillRelease.skill_id == SkillDefinition.id).where(SkillDefinition.tenant_id == tid).order_by(SkillDefinition.name, SkillRelease.semantic_version)).all()
+    def skills(ctx: TenantContext = Depends()):
+        rows = ctx.session.execute(select(SkillDefinition, SkillRelease).join(SkillRelease, SkillRelease.skill_id == SkillDefinition.id).where(SkillDefinition.tenant_id == ctx.tenant_id).order_by(SkillDefinition.name, SkillRelease.semantic_version)).all()
         return [{"definition": _serialize(d), "release": _serialize(r)} for d, r in rows]
 
     @app.post("/v1/skills/upload", status_code=201)
-    async def upload_skill(file: UploadFile = File(...), tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
-        require_tenant(session, tid)
-        release = import_skill(session, tid, file.filename or "uploaded-skill.txt", await file.read(), actor)
-        session.commit()
+    async def upload_skill(file: UploadFile = File(...), ctx: TenantContext = Depends()):
+        release = import_skill(ctx.session, ctx.tenant_id, file.filename or "uploaded-skill.txt", await file.read(), ctx.actor)
+        ctx.session.commit()
         return _serialize(release)
 
     @app.post("/v1/skills/{release_id}/publish")
-    def publish_skill_route(release_id: str, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
-        require_tenant(session, tid)
-        release = publish_skill(session, tid, release_id, actor); session.commit(); return _serialize(release)
+    def publish_skill_route(release_id: str, ctx: TenantContext = Depends()):
+        release = publish_skill(ctx.session, ctx.tenant_id, release_id, ctx.actor); ctx.session.commit(); return _serialize(release)
 
     @app.get("/v1/inbox")
-    def inbox(tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-        require_tenant(session, tid)
-        messages = session.scalars(select(MailMessage).where(MailMessage.tenant_id == tid, MailMessage.provider_deleted.is_(False)).order_by(MailMessage.received_at.desc())).all()
+    def inbox(ctx: TenantContext = Depends()):
+        messages = ctx.session.scalars(select(MailMessage).where(MailMessage.tenant_id == ctx.tenant_id, MailMessage.provider_deleted.is_(False)).order_by(MailMessage.received_at.desc())).all()
         result = []
         for msg in messages:
-            decision = session.scalar(select(DispatchDecision).where(DispatchDecision.mail_message_id == msg.id).order_by(DispatchDecision.created_at.desc()).limit(1))
+            decision = ctx.session.scalar(select(DispatchDecision).where(DispatchDecision.mail_message_id == msg.id).order_by(DispatchDecision.created_at.desc()).limit(1))
             data = _serialize(msg); data["dispatch"] = _serialize(decision) if decision else None; result.append(data)
         return result
 
     @app.post("/v1/inbox/messages", status_code=201)
-    def add_message(payload: MailIn, tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-        require_tenant(session, tid)
-        message = ingest_mail(session, tid, payload.model_dump()); session.commit(); return _serialize(message)
+    def add_message(payload: MailIn, ctx: TenantContext = Depends()):
+        message = ingest_mail(ctx.session, ctx.tenant_id, payload.model_dump()); ctx.session.commit(); return _serialize(message)
 
     @app.post("/v1/inbox/{mail_id}/dispatch")
-    def dispatch(mail_id: str, tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-        require_tenant(session, tid)
-        decision = create_dispatch(session, tid, mail_id); session.commit(); return _serialize(decision)
+    def dispatch(mail_id: str, ctx: TenantContext = Depends()):
+        decision = create_dispatch(ctx.session, ctx.tenant_id, mail_id); ctx.session.commit(); return _serialize(decision)
 
     @app.get("/v1/dispatch")
-    def dispatch_list(tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-        require_tenant(session, tid)
-        rows = session.execute(select(DispatchDecision, MailMessage, TeamDefinition).join(MailMessage, MailMessage.id == DispatchDecision.mail_message_id).join(TeamDefinition, TeamDefinition.id == DispatchDecision.suggested_team_id).where(DispatchDecision.tenant_id == tid).order_by(DispatchDecision.created_at.desc())).all()
+    def dispatch_list(ctx: TenantContext = Depends()):
+        rows = ctx.session.execute(select(DispatchDecision, MailMessage, TeamDefinition).join(MailMessage, MailMessage.id == DispatchDecision.mail_message_id).join(TeamDefinition, TeamDefinition.id == DispatchDecision.suggested_team_id).where(DispatchDecision.tenant_id == ctx.tenant_id).order_by(DispatchDecision.created_at.desc())).all()
         return [{"decision": _serialize(d), "mail": _serialize(m), "suggested_team": _serialize(t)} for d, m, t in rows]
 
     @app.post("/v1/dispatch/{decision_id}/confirm", status_code=201)
-    def confirm(decision_id: str, payload: DispatchConfirmIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
-        require_tenant(session, tid)
-        mission = confirm_dispatch(session, tid, decision_id, payload.team_key, payload.workflow_key, actor); session.commit(); return _serialize(mission)
+    def confirm(decision_id: str, payload: DispatchConfirmIn, ctx: TenantContext = Depends()):
+        mission = confirm_dispatch(ctx.session, ctx.tenant_id, decision_id, payload.team_key, payload.workflow_key, ctx.actor); ctx.session.commit(); return _serialize(mission)
 
     @app.get("/v1/missions")
-    def missions(status: str | None = None, team_id: str | None = None, tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-        require_tenant(session, tid)
-        query = select(Mission).where(Mission.tenant_id == tid)
+    def missions(status: str | None = None, team_id: str | None = None, ctx: TenantContext = Depends()):
+        query = select(Mission).where(Mission.tenant_id == ctx.tenant_id)
         if status: query = query.where(Mission.status == status)
         if team_id: query = query.where(Mission.primary_team_id == team_id)
-        return [_serialize(m) for m in session.scalars(query.order_by(Mission.updated_at.desc())).all()]
+        return [_serialize(m) for m in ctx.session.scalars(query.order_by(Mission.updated_at.desc())).all()]
 
     @app.get("/v1/missions/{mission_id}")
     def mission_detail(mission_id: str, tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
@@ -360,12 +351,11 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
         valid, broken_at = verify_audit_chain(session, tid); return {"valid": valid, "broken_at": broken_at}
 
     @app.post("/v1/outbox/publish")
-    def outbox_publish(tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-        require_tenant(session, tid); return publish_batch(session, tenant_id=tid)
+    def outbox_publish(ctx: TenantContext = Depends()):
+        return publish_batch(ctx.session, tenant_id=ctx.tenant_id)
 
     @app.post("/v1/demo/bootstrap")
-    def demo_bootstrap(tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-        require_tenant(session, tid)
+    def demo_bootstrap(ctx: TenantContext = Depends()):
         samples = [
             {"provider_message_id": "demo:sales:1", "sender": "Sarah Chen <sarah@techbridge.io>", "recipients": ["owner@workbuddy.local"], "subject": "Partnership Proposal — revenue split and Thursday call", "body_text": "We suggest changing the revenue split to 60/40. Can we finalize on Thursday? Please confirm the commercial terms."},
             {"provider_message_id": "demo:ops:1", "sender": "王小明 <wang@acme.co>", "recipients": ["owner@workbuddy.local"], "subject": "产品上线延期风险 — 后端性能问题", "body_text": "并发超过 500 时响应变慢，建议推迟 1-2 周上线。需要确认交期和恢复计划。"},
@@ -373,35 +363,32 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
         ]
         result = []
         for sample in samples:
-            msg = ingest_mail(session, tid, sample)
-            decision = create_dispatch(session, tid, msg.id)
+            msg = ingest_mail(ctx.session, ctx.tenant_id, sample)
+            decision = create_dispatch(ctx.session, ctx.tenant_id, msg.id)
             result.append({"mail_id": msg.id, "dispatch_id": decision.id})
-        session.commit(); return {"created_or_reused": result}
+        ctx.session.commit(); return {"created_or_reused": result}
 
     @app.post("/v1/demo/reset")
-    def demo_reset(tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-        require_tenant(session, tid)
+    def demo_reset(ctx: TenantContext = Depends()):
         # Preserve organization, workflows and skills; clear operational data in dependency order.
-        for model in [OperationAttempt, ToolCall, ToolGrant, ExternalOperation, ApprovalDecision, ApprovalRequest, QualityEvaluation, MemoryRecord, CollaborationRequest, Evidence, Artifact, AgentRun, WorkItemDependency, WorkItem, Mission, DispatchFeedback, DispatchDecision, ModelInvocation, SyncRun, ProviderWebhookEvent, MailMessage, AuditEvent, OutboxEvent]:
-            session.execute(delete(model).where(model.tenant_id == tid))
-        session.commit(); return {"status": "reset", "preserved": ["teams", "constitutions", "workflows", "agents", "skills"]}
+        delete_operational_data(ctx.session, ctx.tenant_id, include_audit=True)
+        ctx.session.commit(); return {"status": "reset", "preserved": ["teams", "constitutions", "workflows", "agents", "skills"]}
 
     @app.post("/v1/scheduler/tick")
-    def scheduler_run(tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-        require_tenant(session, tid); return scheduler_tick(session, tid)
+    def scheduler_run(ctx: TenantContext = Depends()):
+        return scheduler_tick(ctx.session, ctx.tenant_id)
 
     @app.get("/v1/metrics")
-    def metrics(tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-        require_tenant(session, tid)
+    def metrics(ctx: TenantContext = Depends()):
         def counts(model, field):
-            return {str(k): v for k, v in session.execute(select(field, func.count()).where(model.tenant_id == tid).group_by(field)).all()}
+            return {str(k): v for k, v in ctx.session.execute(select(field, func.count()).where(model.tenant_id == ctx.tenant_id).group_by(field)).all()}
         return {
             "missions_by_status": counts(Mission, Mission.status),
             "runs_by_status": counts(AgentRun, AgentRun.status),
             "approvals_by_status": counts(ApprovalRequest, ApprovalRequest.status),
             "operations_by_status": counts(ExternalOperation, ExternalOperation.status),
             "tool_calls_by_status": counts(ToolCall, ToolCall.status),
-            "audit_events": session.scalar(select(func.count()).select_from(AuditEvent).where(AuditEvent.tenant_id == tid)) or 0,
+            "audit_events": ctx.session.scalar(select(func.count()).select_from(AuditEvent).where(AuditEvent.tenant_id == ctx.tenant_id)) or 0,
         }
 
     @app.get("/v1/controls")
@@ -413,26 +400,23 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
         row = set_control(session, tid, payload.scope_type, payload.scope_id, payload.paused, payload.reason, actor); session.commit(); return _serialize(row)
 
     @app.get("/v1/privacy/export")
-    def privacy_export(tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-        require_tenant(session, tid)
+    def privacy_export(ctx: TenantContext = Depends()):
         return {
-            "tenant_id": tid,
+            "tenant_id": ctx.tenant_id,
             "exported_at": utcnow().isoformat(),
-            "mail_messages": [_serialize(x) for x in session.scalars(select(MailMessage).where(MailMessage.tenant_id == tid)).all()],
-            "missions": [_serialize(x) for x in session.scalars(select(Mission).where(Mission.tenant_id == tid)).all()],
-            "work_items": [_serialize(x) for x in session.scalars(select(WorkItem).where(WorkItem.tenant_id == tid)).all()],
-            "artifacts": [_serialize(x) for x in session.scalars(select(Artifact).where(Artifact.tenant_id == tid)).all()],
-            "memory": [_serialize(x) for x in session.scalars(select(MemoryRecord).where(MemoryRecord.tenant_id == tid)).all()],
+            "mail_messages": [_serialize(x) for x in ctx.session.scalars(select(MailMessage).where(MailMessage.tenant_id == ctx.tenant_id)).all()],
+            "missions": [_serialize(x) for x in ctx.session.scalars(select(Mission).where(Mission.tenant_id == ctx.tenant_id)).all()],
+            "work_items": [_serialize(x) for x in ctx.session.scalars(select(WorkItem).where(WorkItem.tenant_id == ctx.tenant_id)).all()],
+            "artifacts": [_serialize(x) for x in ctx.session.scalars(select(Artifact).where(Artifact.tenant_id == ctx.tenant_id)).all()],
+            "memory": [_serialize(x) for x in ctx.session.scalars(select(MemoryRecord).where(MemoryRecord.tenant_id == ctx.tenant_id)).all()],
         }
 
     @app.post("/v1/privacy/delete-operational-data")
-    def privacy_delete(payload: DeleteOperationalDataIn, tid: str = Depends(tenant_id), actor: str = Depends(actor_id), session: Session = Depends(db_session)):
-        require_tenant(session, tid)
-        preserved_audit_count = session.scalar(select(func.count()).select_from(AuditEvent).where(AuditEvent.tenant_id == tid)) or 0
-        for model in [OperationAttempt, ToolCall, ToolGrant, ExternalOperation, ApprovalDecision, ApprovalRequest, QualityEvaluation, MemoryRecord, CollaborationRequest, Evidence, Artifact, AgentRun, WorkItemDependency, WorkItem, Mission, DispatchFeedback, DispatchDecision, ModelInvocation, SyncRun, ProviderWebhookEvent, MailMessage, OutboxEvent]:
-            session.execute(delete(model).where(model.tenant_id == tid))
-        append_audit(session, tenant_id=tid, actor_type="user", actor_id=actor, action="privacy.operational_data_deleted", aggregate_type="tenant", aggregate_id=tid, payload={"audit_events_preserved_before_delete": preserved_audit_count})
-        session.commit()
+    def privacy_delete(payload: DeleteOperationalDataIn, ctx: TenantContext = Depends()):
+        preserved_audit_count = ctx.session.scalar(select(func.count()).select_from(AuditEvent).where(AuditEvent.tenant_id == ctx.tenant_id)) or 0
+        delete_operational_data(ctx.session, ctx.tenant_id)
+        append_audit(ctx.session, tenant_id=ctx.tenant_id, actor_type="user", actor_id=ctx.actor, action="privacy.operational_data_deleted", aggregate_type="tenant", aggregate_id=ctx.tenant_id, payload={"audit_events_preserved_before_delete": preserved_audit_count})
+        ctx.session.commit()
         return {"deleted": True, "audit_preserved": True, "organization_configuration_preserved": True}
 
     gmail = GmailConnector()
@@ -468,9 +452,8 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
             raise HTTPException(400, f"Gmail connection failed: {exc}") from exc
 
     @app.get("/v1/connectors/gmail/accounts")
-    def gmail_accounts(tid: str = Depends(tenant_id), session: Session = Depends(db_session)):
-        require_tenant(session, tid)
-        rows = session.scalars(select(MailAccount).where(MailAccount.tenant_id == tid, MailAccount.provider == "gmail").order_by(MailAccount.created_at.desc())).all()
+    def gmail_accounts(ctx: TenantContext = Depends()):
+        rows = ctx.session.scalars(select(MailAccount).where(MailAccount.tenant_id == ctx.tenant_id, MailAccount.provider == "gmail").order_by(MailAccount.created_at.desc())).all()
         return [{k: v for k, v in _serialize(a).items() if k != "encrypted_credentials"} for a in rows]
 
     @app.post("/v1/connectors/gmail/accounts/{account_id}/sync")
@@ -485,12 +468,8 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
             refs = gmail.list_message_refs(access_token, limit=limit)
             created = reused = 0
             for ref in refs:
-                normalized = gmail.normalize_message(gmail.get_message(access_token, ref["id"]))
-                before = session.scalar(select(MailMessage).where(MailMessage.tenant_id == tid, MailMessage.provider_message_id == normalized["provider_message_id"]))
-                message = ingest_mail(session, tid, normalized, actor="gmail-connector")
-                message.account_id = account.id
-                created += 0 if before else 1
-                reused += 1 if before else 0
+                c, r = upsert_gmail_message(session, tid, gmail, ref["id"], access_token=access_token, account_id=account.id, actor="gmail-connector")
+                created += c; reused += r
             profile = gmail.profile(access_token)
             account.cursor = str(profile.get("historyId", account.cursor or "")) or account.cursor
             account.status = "active"; account.sync_status = "idle"; account.last_synced_at = utcnow(); account.last_error = None
@@ -558,11 +537,8 @@ def create_app(database_url: str | None = None, auto_seed: bool = True) -> FastA
             changes, latest = gmail.history_changes(access_token, account.cursor)
             created = reused = deleted = 0
             for mid in changes["upsert_ids"]:
-                normalized = gmail.normalize_message(gmail.get_message(access_token, mid))
-                before = session.scalar(select(MailMessage).where(MailMessage.tenant_id == account.tenant_id, MailMessage.provider_message_id == normalized["provider_message_id"]))
-                message = ingest_mail(session, account.tenant_id, normalized, actor="gmail-history-sync")
-                message.account_id = account.id
-                created += 0 if before else 1; reused += 1 if before else 0
+                c, r = upsert_gmail_message(session, account.tenant_id, gmail, mid, access_token=access_token, account_id=account.id, actor="gmail-history-sync")
+                created += c; reused += r
             for mid in changes["deleted_ids"]:
                 message = session.scalar(select(MailMessage).where(
                     MailMessage.tenant_id == account.tenant_id,
