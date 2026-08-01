@@ -26,28 +26,45 @@ const config = require('../lib/config.js');
 const logger = require('../lib/logger.js');
 
 /**
- * 从 event.body 解析 JSON 入参，兼容字符串和对象两种形态。
+ * 从 event 解析入参，兼容两种形态：
+ *   1. 妙搭 HTTP 触发：event.body 为 JSON 字符串或对象（标准形态）
+ *   2. 直接调用：event.config_key / event.config_value 挂在 event 顶层
+ *      （对应任务约定的 event.config_key, event.config_value 入参）
  * @param {Object} event - 妙搭事件对象
  * @returns {{config_key: string, config_value: string}}
  * @throws {Error} body 缺失或非对象/JSON 时抛出
  */
 function _parseBody(event) {
   let body = event && event.body;
-  if (body == null) {
+  if (body != null) {
+    if (typeof body === 'string') {
+      if (body.trim() === '') {
+        body = null;
+      } else {
+        try {
+          body = JSON.parse(body);
+        } catch (e) {
+          throw new Error(`update_config: event.body JSON 解析失败：${e.message}`);
+        }
+      }
+    }
+    if (body != null && (typeof body !== 'object' || Array.isArray(body))) {
+      throw new Error('update_config: event.body 不是 JSON 对象');
+    }
+  }
+  // 回退：event 顶层 config_key / config_value（直接调用场景）
+  if (
+    !body &&
+    event &&
+    (event.config_key != null || event.config_value != null)
+  ) {
+    body = {
+      config_key: event.config_key,
+      config_value: event.config_value,
+    };
+  }
+  if (!body) {
     throw new Error('update_config: event.body 缺失');
-  }
-  if (typeof body === 'string') {
-    if (body.trim() === '') {
-      throw new Error('update_config: event.body 为空字符串');
-    }
-    try {
-      body = JSON.parse(body);
-    } catch (e) {
-      throw new Error(`update_config: event.body JSON 解析失败：${e.message}`);
-    }
-  }
-  if (typeof body !== 'object' || Array.isArray(body)) {
-    throw new Error('update_config: event.body 不是 JSON 对象');
   }
   return body;
 }

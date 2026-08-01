@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>WorkBuddy · 归档邮件</title>
+  <title>WorkBuddy · 归档</title>
   <script src="js/api.js"></script>
   <style>
     * { box-sizing: border-box; }
@@ -18,50 +18,25 @@
     .wb-page-title { font-size: 22px; font-weight: 600; margin: 0 0 16px 0; }
     /* 搜索栏 */
     .wb-toolbar {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-      align-items: center;
+      display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; align-items: center;
     }
     .wb-search-input {
-      flex: 1;
-      min-width: 200px;
-      height: 36px;
-      padding: 0 12px;
-      border: 1px solid #e5e6eb;
-      border-radius: 6px;
-      font-size: 14px;
-      outline: none;
-      transition: border-color 0.15s;
+      flex: 1; min-width: 220px; height: 36px; padding: 0 12px;
+      border: 1px solid #e5e6eb; border-radius: 6px; font-size: 14px;
+      outline: none; transition: border-color 0.15s;
     }
     .wb-search-input:focus { border-color: #3370ff; }
     .wb-btn {
-      height: 36px;
-      padding: 0 16px;
-      border: 1px solid #3370ff;
-      background: #3370ff;
-      color: #fff;
-      border-radius: 6px;
-      font-size: 14px;
-      cursor: pointer;
-      transition: background 0.15s;
-      white-space: nowrap;
+      height: 36px; padding: 0 16px; border: 1px solid #3370ff; background: #3370ff;
+      color: #fff; border-radius: 6px; font-size: 14px; cursor: pointer;
+      transition: background 0.15s; white-space: nowrap;
     }
     .wb-btn:hover { background: #2860e6; }
-    .wb-btn:disabled { background: #a8c7ff; border-color: #a8c7ff; cursor: not-allowed; }
-    .wb-btn-ghost {
-      background: #fff;
-      color: #3370ff;
-    }
+    .wb-btn-ghost { background: #fff; color: #3370ff; }
     .wb-btn-ghost:hover { background: #f2f6ff; }
     .wb-error-banner {
       background: #ffece8; color: #f53f3f; padding: 10px 16px;
       border-radius: 6px; margin-bottom: 16px; font-size: 13px; border: 1px solid #fdcdc5;
-    }
-    .wb-success-banner {
-      background: #e8ffea; color: #00b42a; padding: 10px 16px;
-      border-radius: 6px; margin-bottom: 16px; font-size: 13px; border: 1px solid #b3e6bd;
     }
     /* 表格 */
     .wb-card {
@@ -76,9 +51,9 @@
     .wb-table td { padding: 12px 16px; border-bottom: 1px solid #f7f8fa; vertical-align: top; }
     .wb-table tr.wb-row:hover { background: #f7f9ff; cursor: pointer; }
     .wb-table tr.wb-row-expand td { background: #fafbfc; cursor: default; }
-    .wb-subject { max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .wb-from-name { font-weight: 500; }
     .wb-from-mail { color: #86909c; font-size: 12px; }
+    .wb-subject { max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .wb-time { color: #86909c; font-variant-numeric: tabular-nums; white-space: nowrap; }
     .wb-status-tag {
       display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 12px;
@@ -86,18 +61,11 @@
     .wb-status-ARCHIVED { color: #86909c; background: #f2f3f5; }
     .wb-status-NOTIFIED { color: #00b42a; background: #e8ffea; }
     .wb-status-FAILED { color: #f53f3f; background: #ffece8; }
-    .wb-status-PENDING { color: #ff7d00; background: #fff7e8; }
+    .wb-status-NEW { color: #3370ff; background: #e8f0ff; }
     .wb-status-unknown { color: #86909c; background: #f2f3f5; }
-    .wb-row-actions { white-space: nowrap; text-align: right; }
-    .wb-link-btn {
-      background: none; border: 1px solid #e5e6eb; color: #3370ff;
-      padding: 4px 10px; border-radius: 4px; font-size: 12px; cursor: pointer;
-    }
-    .wb-link-btn:hover { border-color: #3370ff; }
-    .wb-link-btn:disabled { color: #c9cdd4; border-color: #e5e6eb; cursor: not-allowed; }
     .wb-preview {
-      padding: 12px 16px; background: #fafbfc; border-top: 1px dashed #e5e6eb;
-      color: #4e5969; font-size: 13px; line-height: 1.6; white-space: pre-wrap; word-break: break-word;
+      padding: 4px 0; color: #4e5969; font-size: 13px; line-height: 1.6;
+      white-space: pre-wrap; word-break: break-word;
     }
     .wb-preview-label { color: #86909c; font-size: 12px; margin-bottom: 4px; }
     .wb-empty-row td { text-align: center; color: #c9cdd4; padding: 40px 16px; }
@@ -122,7 +90,7 @@
     .wb-page-info { color: #86909c; font-size: 13px; padding: 0 12px; }
     @media (max-width: 700px) {
       .wb-container { padding: 16px; }
-      .wb-table th:nth-child(2), .wb-table td:nth-child(2) { display: none; } /* 隐藏发件人列 */
+      .wb-table th:nth-child(2), .wb-table td:nth-child(2) { display: none; }
       .wb-subject { max-width: 160px; }
     }
   </style>
@@ -133,11 +101,11 @@
   <div class="wb-container">
     <h1 class="wb-page-title">归档邮件</h1>
     <div id="error-banner" class="wb-error-banner" style="display:none;"></div>
-    <div id="success-banner" class="wb-success-banner" style="display:none;"></div>
 
     <!-- 搜索栏 -->
     <div class="wb-toolbar">
-      <input id="search-input" class="wb-search-input" type="text" placeholder="按主题关键词搜索…" maxlength="100" />
+      <input id="search-input" class="wb-search-input" type="text"
+             placeholder="按主题 / 发件人 / 邮箱搜索…" maxlength="100" />
       <button id="search-btn" class="wb-btn">搜索</button>
       <button id="reset-btn" class="wb-btn wb-btn-ghost">重置</button>
     </div>
@@ -147,15 +115,14 @@
       <table class="wb-table">
         <thead>
           <tr>
-            <th style="width:38%;">主题</th>
             <th style="width:22%;">发件人</th>
-            <th style="width:16%;">接收时间</th>
-            <th style="width:12%;">状态</th>
-            <th style="width:12%; text-align:right;">操作</th>
+            <th style="width:40%;">主题</th>
+            <th style="width:20%;">接收时间</th>
+            <th style="width:18%;">状态</th>
           </tr>
         </thead>
         <tbody id="archives-tbody">
-          <tr class="wb-loading-row"><td colspan="5">加载中…</td></tr>
+          <tr class="wb-loading-row"><td colspan="4">加载中…</td></tr>
         </tbody>
       </table>
       <div id="pagination" class="wb-pagination" style="display:none;"></div>
@@ -164,6 +131,12 @@
 
   <script>
     'use strict';
+    /**
+     * 归档页逻辑：
+     *   - 调用 get_archives 云函数（keyword 搜 subject / from_name / from_mail）
+     *   - 点击行展开/收起 body_preview 详情
+     *   - 分页（上一页 / 下一页）
+     */
     (function () {
       var PAGE_SIZE = 20;
       var state = { page: 1, keyword: '', total: 0, expanded: null };
@@ -179,7 +152,7 @@
         var d = new Date(String(s).replace(' ', 'T'));
         if (isNaN(d.getTime())) return s;
         var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
-        return d.getFullYear() + '-' + pad(d.getMonth()+1) + '-' + pad(d.getDate()) +
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
           ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
       }
       function truncate(s, n) {
@@ -188,20 +161,21 @@
       }
       function statusTag(status) {
         var s = (status || 'unknown').toUpperCase();
-        var cls = 'wb-status-' + (['ARCHIVED','NOTIFIED','FAILED','PENDING'].indexOf(s) >= 0 ? s : 'unknown');
+        var known = ['ARCHIVED', 'NOTIFIED', 'FAILED', 'NEW'];
+        var cls = known.indexOf(s) >= 0 ? ('wb-status-' + s) : 'wb-status-unknown';
         return '<span class="wb-status-tag ' + cls + '">' + escapeHtml(s) + '</span>';
       }
-      function showError(msg) { var b = $('error-banner'); b.textContent = '加载失败：' + msg; b.style.display = 'block'; }
-      function clearError() { $('error-banner').style.display = 'none'; }
-      function showSuccess(msg) {
-        var b = $('success-banner'); b.textContent = msg; b.style.display = 'block';
-        setTimeout(function () { b.style.display = 'none'; }, 3000);
+      function showError(msg) {
+        var b = $('error-banner');
+        b.textContent = '加载失败：' + msg;
+        b.style.display = 'block';
       }
+      function clearError() { $('error-banner').style.display = 'none'; }
 
       function renderSkeleton() {
         var html = '';
         for (var i = 0; i < 5; i++) {
-          html += '<tr class="wb-loading-row"><td colspan="5"><span class="wb-skel-line"></span></td></tr>';
+          html += '<tr class="wb-loading-row"><td colspan="4"><span class="wb-skel-line"></span></td></tr>';
         }
         $('archives-tbody').innerHTML = html;
       }
@@ -209,46 +183,42 @@
       function renderRows(items) {
         var tbody = $('archives-tbody');
         if (!items || items.length === 0) {
-          tbody.innerHTML = '<tr class="wb-empty-row"><td colspan="5">暂无归档邮件</td></tr>';
+          tbody.innerHTML = '<tr class="wb-empty-row"><td colspan="4">暂无归档邮件</td></tr>';
           return;
         }
         var html = '';
         for (var i = 0; i < items.length; i++) {
           var it = items[i];
-          var rowId = 'row-' + i;
           html +=
             '<tr class="wb-row" data-row="' + i + '">' +
-              '<td><div class="wb-subject" title="' + escapeHtml(it.subject) + '">' + escapeHtml(truncate(it.subject, 60)) + '</div></td>' +
               '<td><div class="wb-from-name">' + escapeHtml(it.from_name || '—') + '</div>' +
                   '<div class="wb-from-mail">' + escapeHtml(it.from_mail || '') + '</div></td>' +
+              '<td><div class="wb-subject" title="' + escapeHtml(it.subject || '') + '">' +
+                escapeHtml(truncate(it.subject, 60)) + '</div></td>' +
               '<td><span class="wb-time">' + escapeHtml(fmtTime(it.received_at)) + '</span></td>' +
               '<td>' + statusTag(it.processing_status) + '</td>' +
-              '<td class="wb-row-actions">' +
-                '<button class="wb-link-btn" data-resend="' + escapeHtml(it.message_id) + '">重发通知</button>' +
-              '</td>' +
             '</tr>';
-          // 展开行（默认隐藏）
+          // 展开行（默认隐藏）：显示 body_preview 详情
           html +=
             '<tr class="wb-row-expand" data-expand="' + i + '" style="display:none;">' +
-              '<td colspan="5">' +
-                '<div class="wb-preview-label">正文预览（前 300 字）：</div>' +
-                '<div class="wb-preview">' + escapeHtml(truncate(it.body_preview, 300)) + '</div>' +
+              '<td colspan="4">' +
+                '<div class="wb-preview-label">正文预览：</div>' +
+                '<div class="wb-preview">' + escapeHtml(it.body_preview || '（无预览内容）') + '</div>' +
               '</td>' +
             '</tr>';
         }
         tbody.innerHTML = html;
 
-        // 绑定行点击展开
+        // 绑定行点击展开/收起
         var rows = tbody.querySelectorAll('.wb-row');
         for (var r = 0; r < rows.length; r++) {
           (function (rowEl) {
-            rowEl.addEventListener('click', function (e) {
-              // 点重发按钮不触发展开
-              if (e.target && e.target.getAttribute('data-resend')) return;
+            rowEl.addEventListener('click', function () {
               var idx = rowEl.getAttribute('data-row');
               var expandRow = tbody.querySelector('[data-expand="' + idx + '"]');
               if (!expandRow) return;
               var isOpen = expandRow.style.display !== 'none';
+              // 收起其他已展开行
               if (state.expanded !== null && state.expanded !== idx) {
                 var prev = tbody.querySelector('[data-expand="' + state.expanded + '"]');
                 if (prev) prev.style.display = 'none';
@@ -257,32 +227,6 @@
               state.expanded = isOpen ? null : idx;
             });
           })(rows[r]);
-        }
-
-        // 绑定重发按钮
-        var resendBtns = tbody.querySelectorAll('[data-resend]');
-        for (var k = 0; k < resendBtns.length; k++) {
-          (function (btn) {
-            btn.addEventListener('click', function (e) {
-              e.stopPropagation();
-              var mid = btn.getAttribute('data-resend');
-              if (!mid) return;
-              btn.disabled = true;
-              var oldText = btn.textContent;
-              btn.textContent = '发送中…';
-              WorkBuddyAPI.resendNotification(mid)
-                .then(function (data) {
-                  btn.disabled = false;
-                  btn.textContent = oldText;
-                  showSuccess('已重发通知：' + (data.subject || mid));
-                })
-                .catch(function (err) {
-                  btn.disabled = false;
-                  btn.textContent = oldText;
-                  showError('重发失败：' + (err && err.message ? err.message : err));
-                });
-            });
-          })(resendBtns[k]);
         }
       }
 
@@ -293,26 +237,8 @@
         pag.style.display = 'flex';
         var html = '';
         html += '<button class="wb-page-btn" data-page="' + (page - 1) + '" ' + (page <= 1 ? 'disabled' : '') + '>上一页</button>';
-
-        // 页码：显示当前页前后各 2 页，首末页
-        var pages = [];
-        pages.push(1);
-        for (var p = page - 2; p <= page + 2; p++) {
-          if (p > 1 && p < totalPages) pages.push(p);
-        }
-        if (totalPages > 1) pages.push(totalPages);
-        // 去重排序
-        pages = pages.filter(function (v, i, arr) { return arr.indexOf(v) === i; }).sort(function (a, b) { return a - b; });
-        var prev = 0;
-        for (var i = 0; i < pages.length; i++) {
-          if (pages[i] - prev > 1) html += '<span class="wb-page-info">…</span>';
-          var cls = pages[i] === page ? 'wb-page-btn wb-page-active' : 'wb-page-btn';
-          html += '<button class="' + cls + '" data-page="' + pages[i] + '">' + pages[i] + '</button>';
-          prev = pages[i];
-        }
-
+        html += '<span class="wb-page-info">第 ' + page + ' / ' + totalPages + ' 页，共 ' + total + ' 条</span>';
         html += '<button class="wb-page-btn" data-page="' + (page + 1) + '" ' + (page >= totalPages ? 'disabled' : '') + '>下一页</button>';
-        html += '<span class="wb-page-info">共 ' + total + ' 条 / ' + totalPages + ' 页</span>';
         pag.innerHTML = html;
 
         var btns = pag.querySelectorAll('.wb-page-btn[data-page]');
@@ -333,17 +259,18 @@
         clearError();
         renderSkeleton();
         $('pagination').style.display = 'none';
-        WorkBuddyAPI.listArchives(state.page, PAGE_SIZE, state.keyword)
+        WorkBuddyAPI.getArchives(state.page, PAGE_SIZE, state.keyword)
           .then(function (data) {
             state.total = data.total != null ? Number(data.total) : 0;
             // 钳制 page 防越界
             var totalPages = Math.max(1, Math.ceil(state.total / PAGE_SIZE));
             if (state.page > totalPages) state.page = totalPages;
-            renderRows(data.items || []);
+            state.expanded = null;
+            renderRows(data.archives || []);
             renderPagination(state.page, state.total);
           })
           .catch(function (err) {
-            $('archives-tbody').innerHTML = '<tr class="wb-empty-row"><td colspan="5">加载失败</td></tr>';
+            $('archives-tbody').innerHTML = '<tr class="wb-empty-row"><td colspan="4">加载失败</td></tr>';
             showError(err && err.message ? err.message : err);
           });
       }
@@ -351,20 +278,25 @@
       function bindToolbar() {
         var input = $('search-input');
         $('search-btn').addEventListener('click', function () {
-          state.page = 1; state.keyword = input.value.trim(); state.expanded = null; load();
+          state.page = 1; state.keyword = input.value.trim(); load();
         });
         $('reset-btn').addEventListener('click', function () {
-          input.value = ''; state.page = 1; state.keyword = ''; state.expanded = null; load();
+          input.value = ''; state.page = 1; state.keyword = ''; load();
         });
         input.addEventListener('keydown', function (e) {
-          if (e.key === 'Enter') { state.page = 1; state.keyword = input.value.trim(); state.expanded = null; load(); }
+          if (e.key === 'Enter') {
+            state.page = 1; state.keyword = input.value.trim(); load();
+          }
         });
       }
 
       WorkBuddyNav.mount('nav').then(function () {
         bindToolbar();
         load();
-      }, function () { bindToolbar(); load(); });
+      }, function () {
+        bindToolbar();
+        load();
+      });
     })();
   </script>
 </body>

@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WorkBuddy · 日志</title>
+  <script src="js/api.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+      background: #f5f6f7;
+      color: #1d2129;
+      font-size: 14px;
+    }
+    .wb-container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+    .wb-page-title { font-size: 22px; font-weight: 600; margin: 0 0 16px 0; }
+    /* 工具栏：级别过滤 + 自动刷新 */
+    .wb-toolbar {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      margin-bottom: 16px;
+    }
+    .wb-filter-group {
+      display: inline-flex; gap: 4px; background: #fff; border: 1px solid #e5e6eb;
+      border-radius: 6px; padding: 4px;
+    }
+    .wb-filter-btn {
+      height: 30px; padding: 0 14px; border: none; background: transparent;
+      color: #4e5969; border-radius: 4px; cursor: pointer; font-size: 13px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .wb-filter-btn:hover { background: #f2f3f5; color: #1d2129; }
+    .wb-filter-btn.wb-filter-active {
+      background: #3370ff; color: #fff; font-weight: 600;
+    }
+    .wb-auto-refresh {
+      display: inline-flex; align-items: center; gap: 8px; margin-left: auto;
+      font-size: 13px; color: #4e5969; cursor: pointer; user-select: none;
+    }
+    .wb-switch {
+      position: relative; display: inline-block; width: 36px; height: 20px;
+      background: #c9cdd4; border-radius: 10px; transition: background 0.2s;
+    }
+    .wb-switch::after {
+      content: ''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+      background: #fff; border-radius: 50%; transition: left 0.2s;
+    }
+    .wb-auto-refresh.wb-active .wb-switch { background: #3370ff; }
+    .wb-auto-refresh.wb-active .wb-switch::after { left: 18px; }
+    .wb-refresh-tip { color: #86909c; font-size: 12px; }
+    .wb-error-banner {
+      background: #ffece8; color: #f53f3f; padding: 10px 16px;
+      border-radius: 6px; margin-bottom: 16px; font-size: 13px; border: 1px solid #fdcdc5;
+    }
+    /* 表格 */
+    .wb-card {
+      background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+      border: 1px solid #f0f1f2; overflow: hidden;
+    }
+    .wb-table { width: 100%; border-collapse: collapse; }
+    .wb-table th {
+      text-align: left; padding: 12px 16px; font-size: 13px; color: #86909c;
+      font-weight: 600; background: #fafbfc; border-bottom: 1px solid #f0f1f2;
+    }
+    .wb-table td { padding: 12px 16px; border-bottom: 1px solid #f7f8fa; vertical-align: top; }
+    .wb-table tr:last-child td { border-bottom: none; }
+    .wb-log-time { color: #86909c; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    .wb-log-level {
+      display: inline-block; padding: 1px 8px; border-radius: 4px;
+      font-size: 12px; font-weight: 600; text-align: center; min-width: 48px;
+    }
+    .wb-log-level-INFO { color: #3370ff; background: #e8f0ff; }
+    .wb-log-level-WARN { color: #ff7d00; background: #fff7e8; }
+    .wb-log-level-ERROR { color: #f53f3f; background: #ffece8; }
+    .wb-log-level-DEBUG { color: #86909c; background: #f2f3f5; }
+    .wb-log-msg { color: #1d2129; word-break: break-word; white-space: pre-wrap; }
+    .wb-empty-row td { text-align: center; color: #c9cdd4; padding: 40px 16px; }
+    .wb-loading-row td { text-align: center; color: #86909c; padding: 40px 16px; }
+    .wb-skel-line {
+      display: inline-block; height: 14px; background: #f2f3f5; border-radius: 4px;
+      width: 80%; animation: wb-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes wb-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+    /* 分页 */
+    .wb-pagination {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 16px; flex-wrap: wrap;
+    }
+    .wb-page-btn {
+      min-width: 32px; height: 32px; padding: 0 8px; border: 1px solid #e5e6eb;
+      background: #fff; border-radius: 4px; cursor: pointer; font-size: 13px; color: #4e5969;
+    }
+    .wb-page-btn:hover:not(:disabled) { border-color: #3370ff; color: #3370ff; }
+    .wb-page-btn.wb-page-active { background: #3370ff; color: #fff; border-color: #3370ff; }
+    .wb-page-btn:disabled { color: #c9cdd4; cursor: not-allowed; }
+    .wb-page-info { color: #86909c; font-size: 13px; padding: 0 12px; }
+    @media (max-width: 700px) {
+      .wb-container { padding: 16px; }
+      .wb-table th:nth-child(1), .wb-table td:nth-child(1) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="nav" data-active="logs"></div>
+
+  <div class="wb-container">
+    <h1 class="wb-page-title">运行日志</h1>
+    <div id="error-banner" class="wb-error-banner" style="display:none;"></div>
+
+    <!-- 工具栏 -->
+    <div class="wb-toolbar">
+      <div class="wb-filter-group" id="filter-group">
+        <button class="wb-filter-btn wb-filter-active" data-level="">全部</button>
+        <button class="wb-filter-btn" data-level="INFO">INFO</button>
+        <button class="wb-filter-btn" data-level="WARN">WARN</button>
+        <button class="wb-filter-btn" data-level="ERROR">ERROR</button>
+        <button class="wb-filter-btn" data-level="DEBUG">DEBUG</button>
+      </div>
+      <label class="wb-auto-refresh" id="auto-refresh">
+        <span class="wb-switch"></span>
+        <span>自动刷新</span>
+        <span class="wb-refresh-tip" id="refresh-tip">（关闭）</span>
+      </label>
+    </div>
+
+    <!-- 日志表格 -->
+    <div class="wb-card">
+      <table class="wb-table">
+        <thead>
+          <tr>
+            <th style="width:170px;">时间</th>
+            <th style="width:90px;">级别</th>
+            <th>消息</th>
+          </tr>
+        </thead>
+        <tbody id="logs-tbody">
+          <tr class="wb-loading-row"><td colspan="3">加载中…</td></tr>
+        </tbody>
+      </table>
+      <div id="pagination" class="wb-pagination" style="display:none;"></div>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+    /**
+     * 日志页逻辑：
+     *   - 级别过滤按钮切换 level，重置到第 1 页
+     *   - 分页上一页 / 下一页
+     *   - 自动刷新开关：开启时每 10 秒刷新当前页
+     */
+    (function () {
+      var PAGE_SIZE = 20;
+      var AUTO_REFRESH_INTERVAL = 10000; // 10s
+      var state = { page: 1, level: '', total: 0 };
+      var autoRefreshTimer = null;
+
+      function $(id) { return document.getElementById(id); }
+      function escapeHtml(s) {
+        return String(s == null ? '' : s)
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      }
+      function fmtTime(s) {
+        if (!s) return '—';
+        var d = new Date(String(s).replace(' ', 'T'));
+        if (isNaN(d.getTime())) return s;
+        var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+          ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+      }
+      function levelClass(level) {
+        var l = (level || 'INFO').toUpperCase();
+        if (l !== 'INFO' && l !== 'WARN' && l !== 'ERROR' && l !== 'DEBUG') {
+          l = 'INFO';
+        }
+        return 'wb-log-level-' + l;
+      }
+      function showError(msg) {
+        var b = $('error-banner');
+        b.textContent = '加载失败：' + msg;
+        b.style.display = 'block';
+      }
+      function clearError() { $('error-banner').style.display = 'none'; }
+
+      function renderSkeleton() {
+        var html = '';
+        for (var i = 0; i < 5; i++) {
+          html += '<tr class="wb-loading-row"><td colspan="3"><span class="wb-skel-line"></span></td></tr>';
+        }
+        $('logs-tbody').innerHTML = html;
+      }
+
+      function renderRows(logs) {
+        var tbody = $('logs-tbody');
+        if (!logs || logs.length === 0) {
+          tbody.innerHTML = '<tr class="wb-empty-row"><td colspan="3">暂无日志</td></tr>';
+          return;
+        }
+        var html = '';
+        for (var i = 0; i < logs.length; i++) {
+          var log = logs[i];
+          var level = (log.log_level || 'INFO').toUpperCase();
+          html +=
+            '<tr>' +
+              '<td><span class="wb-log-time">' + escapeHtml(fmtTime(log.created_at)) + '</span></td>' +
+              '<td><span class="wb-log-level ' + levelClass(level) + '">' + escapeHtml(level) + '</span></td>' +
+              '<td><div class="wb-log-msg">' + escapeHtml(log.message != null ? log.message : '') + '</div></td>' +
+            '</tr>';
+        }
+        tbody.innerHTML = html;
+      }
+
+      function renderPagination(page, total) {
+        var pag = $('pagination');
+        var totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+        if (total === 0) { pag.style.display = 'none'; return; }
+        pag.style.display = 'flex';
+        var html = '';
+        html += '<button class="wb-page-btn" data-page="' + (page - 1) + '" ' + (page <= 1 ? 'disabled' : '') + '>上一页</button>';
+        html += '<span class="wb-page-info">第 ' + page + ' / ' + totalPages + ' 页，共 ' + total + ' 条</span>';
+        html += '<button class="wb-page-btn" data-page="' + (page + 1) + '" ' + (page >= totalPages ? 'disabled' : '') + '>下一页</button>';
+        pag.innerHTML = html;
+
+        var btns = pag.querySelectorAll('.wb-page-btn[data-page]');
+        for (var b = 0; b < btns.length; b++) {
+          (function (btn) {
+            btn.addEventListener('click', function () {
+              if (btn.disabled) return;
+              var p = parseInt(btn.getAttribute('data-page'), 10);
+              if (isNaN(p) || p < 1 || p > totalPages || p === state.page) return;
+              state.page = p;
+              load();
+            });
+          })(btns[b]);
+        }
+      }
+
+      function load() {
+        clearError();
+        renderSkeleton();
+        $('pagination').style.display = 'none';
+        WorkBuddyAPI.getLogs(state.page, PAGE_SIZE, state.level)
+          .then(function (data) {
+            state.total = data.total != null ? Number(data.total) : 0;
+            // 钳制 page 防越界
+            var totalPages = Math.max(1, Math.ceil(state.total / PAGE_SIZE));
+            if (state.page > totalPages) state.page = totalPages;
+            renderRows(data.logs || []);
+            renderPagination(state.page, state.total);
+          })
+          .catch(function (err) {
+            $('logs-tbody').innerHTML = '<tr class="wb-empty-row"><td colspan="3">加载失败</td></tr>';
+            showError(err && err.message ? err.message : err);
+          });
+      }
+
+      // 级别过滤按钮
+      function bindFilters() {
+        var btns = $('filter-group').querySelectorAll('.wb-filter-btn');
+        for (var i = 0; i < btns.length; i++) {
+          (function (btn) {
+            btn.addEventListener('click', function () {
+              for (var j = 0; j < btns.length; j++) btns[j].classList.remove('wb-filter-active');
+              btn.classList.add('wb-filter-active');
+              state.level = btn.getAttribute('data-level') || '';
+              state.page = 1;
+              load();
+            });
+          })(btns[i]);
+        }
+      }
+
+      // 自动刷新开关
+      function bindAutoRefresh() {
+        var el = $('auto-refresh');
+        el.addEventListener('click', function () {
+          if (autoRefreshTimer) {
+            clearInterval(autoRefreshTimer);
+            autoRefreshTimer = null;
+            el.classList.remove('wb-active');
+            $('refresh-tip').textContent = '（关闭）';
+          } else {
+            el.classList.add('wb-active');
+            $('refresh-tip').textContent = '（每 10s）';
+            autoRefreshTimer = setInterval(function () {
+              if (!document.hidden) load();
+            }, AUTO_REFRESH_INTERVAL);
+          }
+        });
+      }
+
+      // 页面隐藏时暂停自动刷新，可见时立即刷新一次
+      document.addEventListener('visibilitychange', function () {
+        if (!document.hidden && autoRefreshTimer) load();
+      });
+
+      WorkBuddyNav.mount('nav').then(function () {
+        bindFilters();
+        bindAutoRefresh();
+        load();
+      }, function () {
+        bindFilters();
+        bindAutoRefresh();
+        load();
+      });
+    })();
+  </script>
+</body>
+</html>

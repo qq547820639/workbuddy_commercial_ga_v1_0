@@ -14,7 +14,7 @@
       color: #1d2129;
       font-size: 14px;
     }
-    .wb-container { max-width: 720px; margin: 0 auto; padding: 24px; }
+    .wb-container { max-width: 760px; margin: 0 auto; padding: 24px; }
     .wb-page-title { font-size: 22px; font-weight: 600; margin: 0 0 8px 0; }
     .wb-page-desc { color: #86909c; font-size: 13px; margin: 0 0 20px 0; }
     .wb-card {
@@ -26,19 +26,24 @@
     .wb-form-label {
       display: block; font-weight: 600; font-size: 14px; margin-bottom: 6px; color: #1d2129;
     }
-    .wb-form-label .wb-required { color: #f53f3f; margin-left: 2px; }
+    .wb-form-label .wb-key { color: #86909c; font-weight: 400; font-size: 12px; margin-left: 6px; font-family: "SFMono-Regular", Menlo, Consolas, monospace; }
     .wb-form-hint { color: #86909c; font-size: 12px; margin-top: 4px; }
+    .wb-form-row { display: flex; gap: 8px; align-items: center; }
     .wb-form-input {
-      width: 100%; height: 36px; padding: 0 12px; border: 1px solid #e5e6eb;
+      flex: 1; height: 36px; padding: 0 12px; border: 1px solid #e5e6eb;
       border-radius: 6px; font-size: 14px; outline: none; transition: border-color 0.15s;
       font-family: inherit;
     }
     .wb-form-input:focus { border-color: #3370ff; }
     .wb-form-input.wb-mono { font-family: "SFMono-Regular", Menlo, Consolas, monospace; font-size: 13px; }
     .wb-form-input:disabled { background: #f7f8fa; color: #86909c; }
+    .wb-toggle-btn {
+      height: 36px; padding: 0 12px; border: 1px solid #e5e6eb; background: #fff;
+      border-radius: 6px; font-size: 12px; color: #4e5969; cursor: pointer; white-space: nowrap;
+    }
+    .wb-toggle-btn:hover { border-color: #3370ff; color: #3370ff; }
     .wb-item-status {
-      display: inline-block; font-size: 12px; margin-left: 8px;
-      vertical-align: middle;
+      display: inline-block; font-size: 12px; margin-left: 8px; vertical-align: middle;
     }
     .wb-item-status.wb-ok { color: #00b42a; }
     .wb-item-status.wb-fail { color: #f53f3f; }
@@ -56,6 +61,17 @@
     .wb-banner-success { background: #e8ffea; color: #00b42a; border: 1px solid #b3e6bd; }
     .wb-banner-error { background: #ffece8; color: #f53f3f; border: 1px solid #fdcdc5; }
     .wb-banner-info { background: #e8f0ff; color: #3370ff; border: 1px solid #b8d4ff; }
+    /* Toast 轻提示 */
+    .wb-toast {
+      position: fixed; top: 24px; left: 50%; transform: translateX(-50%) translateY(-20px);
+      background: #1d2129; color: #fff; padding: 10px 20px; border-radius: 6px;
+      font-size: 13px; opacity: 0; transition: opacity 0.2s, transform 0.2s;
+      z-index: 1000; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .wb-toast.wb-toast-show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .wb-toast.wb-toast-success { background: #00b42a; }
+    .wb-toast.wb-toast-error { background: #f53f3f; }
+    .wb-loading-tip { color: #86909c; font-size: 13px; }
   </style>
 </head>
 <body>
@@ -63,70 +79,134 @@
 
   <div class="wb-container">
     <h1 class="wb-page-title">配置</h1>
-    <p class="wb-page-desc">填写 WorkBuddy 运行参数后点击「保存」。每项独立保存，失败项会单独标红。</p>
+    <p class="wb-page-desc">管理 WorkBuddy 运行参数与章程版本。加载时自动回填已保存配置，点击「保存」逐项写入。</p>
 
     <div id="banner" class="wb-banner wb-banner-info" style="display:none;"></div>
 
     <div class="wb-card">
-      <!-- NOTIFY_CHAT_ID -->
+      <!-- 通知群聊 ID -->
       <div class="wb-form-group">
         <label class="wb-form-label" for="cfg-NOTIFY_CHAT_ID">
-          NOTIFY_CHAT_ID<span class="wb-required">*</span>
-          <span id="status-NOTIFY_CHAT_ID" class="wb-item-status"></span>
+          通知群聊 ID<span class="wb-item-status" id="status-NOTIFY_CHAT_ID"></span>
+          <span class="wb-key">NOTIFY_CHAT_ID</span>
         </label>
         <input id="cfg-NOTIFY_CHAT_ID" type="text" class="wb-form-input wb-mono"
                placeholder="例如：oc_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
-        <div class="wb-form-hint">通知目标群聊的 chat_id（飞书群 OpenChatId，以 oc_ 开头）。worker 与「重发通知」都会往该群发卡片。</div>
+        <div class="wb-form-hint">通知目标群聊 chat_id（飞书 OpenChatId，以 oc_ 开头）。</div>
       </div>
 
-      <!-- POLL_INTERVAL -->
+      <!-- 轮询间隔 -->
       <div class="wb-form-group">
         <label class="wb-form-label" for="cfg-POLL_INTERVAL">
-          POLL_INTERVAL<span class="wb-required">*</span>
-          <span id="status-POLL_INTERVAL" class="wb-item-status"></span>
+          轮询间隔（秒）<span class="wb-item-status" id="status-POLL_INTERVAL"></span>
+          <span class="wb-key">POLL_INTERVAL</span>
         </label>
         <input id="cfg-POLL_INTERVAL" type="number" min="1" step="1" class="wb-form-input"
                placeholder="例如：60" autocomplete="off" />
-        <div class="wb-form-hint">轮询间隔（秒）。建议 ≥ 30，过小会增大 API 压力。</div>
+        <div class="wb-form-hint">邮件轮询间隔，建议 ≥ 30 秒。</div>
       </div>
 
-      <!-- MAX_RECONNECT_BACKOFF -->
+      <!-- LLM API Key -->
       <div class="wb-form-group">
-        <label class="wb-form-label" for="cfg-MAX_RECONNECT_BACKOFF">
-          MAX_RECONNECT_BACKOFF<span class="wb-required">*</span>
-          <span id="status-MAX_RECONNECT_BACKOFF" class="wb-item-status"></span>
+        <label class="wb-form-label" for="cfg-LLM_API_KEY">
+          LLM API Key<span class="wb-item-status" id="status-LLM_API_KEY"></span>
+          <span class="wb-key">LLM_API_KEY</span>
         </label>
-        <input id="cfg-MAX_RECONNECT_BACKOFF" type="number" min="1" step="1" class="wb-form-input"
-               placeholder="例如：600" autocomplete="off" />
-        <div class="wb-form-hint">指数退避上限（秒）。轮询失败后重试间隔按 2^n 递增，达到此值后封顶。</div>
+        <div class="wb-form-row">
+          <input id="cfg-LLM_API_KEY" type="password" class="wb-form-input wb-mono"
+                 placeholder="sk-xxxxxxxxxxxxxxxx" autocomplete="off" />
+          <button type="button" class="wb-toggle-btn" data-toggle="cfg-LLM_API_KEY">显示</button>
+        </div>
+        <div class="wb-form-hint">大模型服务密钥，将用于邮件分类与计划生成。</div>
+      </div>
+
+      <!-- LLM 模型 -->
+      <div class="wb-form-group">
+        <label class="wb-form-label" for="cfg-LLM_MODEL">
+          LLM 模型<span class="wb-item-status" id="status-LLM_MODEL"></span>
+          <span class="wb-key">LLM_MODEL</span>
+        </label>
+        <input id="cfg-LLM_MODEL" type="text" class="wb-form-input wb-mono"
+               placeholder="例如：doubao-pro-32k" autocomplete="off" />
+        <div class="wb-form-hint">调用的模型名称，需与 LLM 服务一致。</div>
+      </div>
+
+      <!-- 飞书 App ID -->
+      <div class="wb-form-group">
+        <label class="wb-form-label" for="cfg-FEISHU_APP_ID">
+          飞书 App ID<span class="wb-item-status" id="status-FEISHU_APP_ID"></span>
+          <span class="wb-key">FEISHU_APP_ID</span>
+        </label>
+        <input id="cfg-FEISHU_APP_ID" type="text" class="wb-form-input wb-mono"
+               placeholder="cli_xxxxxxxxxxxx" autocomplete="off" />
+        <div class="wb-form-hint">飞书自建应用 App ID。</div>
+      </div>
+
+      <!-- 飞书 App Secret -->
+      <div class="wb-form-group">
+        <label class="wb-form-label" for="cfg-FEISHU_APP_SECRET">
+          飞书 App Secret<span class="wb-item-status" id="status-FEISHU_APP_SECRET"></span>
+          <span class="wb-key">FEISHU_APP_SECRET</span>
+        </label>
+        <div class="wb-form-row">
+          <input id="cfg-FEISHU_APP_SECRET" type="password" class="wb-form-input wb-mono"
+                 placeholder="应用密钥" autocomplete="off" />
+          <button type="button" class="wb-toggle-btn" data-toggle="cfg-FEISHU_APP_SECRET">显示</button>
+        </div>
+        <div class="wb-form-hint">飞书自建应用 App Secret，请妥善保管。</div>
+      </div>
+
+      <!-- 审批定义 Code -->
+      <div class="wb-form-group">
+        <label class="wb-form-label" for="cfg-APPROVAL_CODE">
+          审批定义 Code<span class="wb-item-status" id="status-APPROVAL_CODE"></span>
+          <span class="wb-key">APPROVAL_CODE</span>
+        </label>
+        <input id="cfg-APPROVAL_CODE" type="text" class="wb-form-input wb-mono"
+               placeholder="例如：approval_code_xxx" autocomplete="off" />
+        <div class="wb-form-hint">触发飞书审批所用的审批定义 Code。</div>
       </div>
 
       <div class="wb-actions">
         <button id="save-btn" class="wb-btn">保存</button>
-        <span id="saving-tip" style="color:#86909c; font-size:13px;"></span>
+        <span id="saving-tip" class="wb-loading-tip"></span>
       </div>
     </div>
   </div>
 
+  <!-- Toast 容器 -->
+  <div id="toast" class="wb-toast"></div>
+
   <script>
     'use strict';
     /**
-     * 配置页说明：
-     *   按任务最简实现，加载时不调任何 API（get_status 不返回 config 项，且未提供 get_config 云函数），
-     *   首次使用需用户手动填写配置。点击「保存」时按顺序逐项调用 update_config 云函数。
-     *
-     *   如后续新增 get_config 云函数返回 { ok, data: { NOTIFY_CHAT_ID, POLL_INTERVAL, ... } }，
-     *   可在 init 里调 WorkBuddyAPI 补一个 getConfig 方法回填表单。
+     * 配置页逻辑：
+     *   - 加载时调用 get_config 云函数，按 config_key 回填表单
+     *   - 点击「保存」逐项调用 update_config 云函数
+     *   - 全部成功显示 toast；部分失败用 banner 列出明细
      */
     (function () {
-      var KEYS = ['NOTIFY_CHAT_ID', 'POLL_INTERVAL', 'MAX_RECONNECT_BACKOFF'];
+      // 配置项 key 列表（与表单 input id 一一对应：cfg-<KEY>）
+      var KEYS = [
+        'NOTIFY_CHAT_ID',
+        'POLL_INTERVAL',
+        'LLM_API_KEY',
+        'LLM_MODEL',
+        'FEISHU_APP_ID',
+        'FEISHU_APP_SECRET',
+        'APPROVAL_CODE'
+      ];
 
       function $(id) { return document.getElementById(id); }
+
+      // 设置单项状态文案
       function setItemStatus(key, cls, text) {
         var el = $('status-' + key);
+        if (!el) return;
         el.className = 'wb-item-status ' + (cls || '');
         el.textContent = text || '';
       }
+
       function showBanner(cls, text) {
         var b = $('banner');
         b.className = 'wb-banner ' + cls;
@@ -135,18 +215,64 @@
       }
       function hideBanner() { $('banner').style.display = 'none'; }
 
+      // 轻量 toast：3 秒后自动消失
+      var toastTimer = null;
+      function showToast(cls, text) {
+        var t = $('toast');
+        t.className = 'wb-toast ' + (cls || '');
+        t.textContent = text || '';
+        // 触发重排再加 show 类，确保过渡生效
+        void t.offsetWidth;
+        t.classList.add('wb-toast-show');
+        if (toastTimer) { clearTimeout(toastTimer); toastTimer = null; }
+        toastTimer = setTimeout(function () {
+          t.classList.remove('wb-toast-show');
+        }, 3000);
+      }
+
+      // 校验：必填 + 数值字段为正整数
       function validate(values) {
-        // 基础校验：非空 + 数值字段为正整数
         if (!values.NOTIFY_CHAT_ID) return 'NOTIFY_CHAT_ID 不能为空';
         if (!/^\d+$/.test(values.POLL_INTERVAL) || Number(values.POLL_INTERVAL) < 1) {
           return 'POLL_INTERVAL 必须为正整数';
         }
-        if (!/^\d+$/.test(values.MAX_RECONNECT_BACKOFF) || Number(values.MAX_RECONNECT_BACKOFF) < 1) {
-          return 'MAX_RECONNECT_BACKOFF 必须为正整数';
-        }
+        if (!values.LLM_API_KEY) return 'LLM_API_KEY 不能为空';
+        if (!values.LLM_MODEL) return 'LLM_MODEL 不能为空';
+        if (!values.FEISHU_APP_ID) return 'FEISHU_APP_ID 不能为空';
+        if (!values.FEISHU_APP_SECRET) return 'FEISHU_APP_SECRET 不能为空';
+        if (!values.APPROVAL_CODE) return 'APPROVAL_CODE 不能为空';
         return null;
       }
 
+      // 加载配置并回填表单
+      function loadConfig() {
+        $('saving-tip').textContent = '加载配置中…';
+        WorkBuddyAPI.getConfig()
+          .then(function (data) {
+            $('saving-tip').textContent = '';
+            var configs = (data && data.configs) || [];
+            var map = {};
+            for (var i = 0; i < configs.length; i++) {
+              var row = configs[i];
+              if (row && row.config_key != null) {
+                map[row.config_key] = row.config_value != null ? row.config_value : '';
+              }
+            }
+            for (var k = 0; k < KEYS.length; k++) {
+              var key = KEYS[k];
+              var input = $('cfg-' + key);
+              if (input && Object.prototype.hasOwnProperty.call(map, key)) {
+                input.value = map[key];
+              }
+            }
+          })
+          .catch(function (err) {
+            $('saving-tip').textContent = '';
+            showBanner('wb-banner-error', '加载配置失败：' + (err && err.message ? err.message : err) + '。可手动填写后保存。');
+          });
+      }
+
+      // 保存：逐项调用 update_config
       function save() {
         var values = {};
         for (var i = 0; i < KEYS.length; i++) {
@@ -155,10 +281,10 @@
         var err = validate(values);
         if (err) {
           showBanner('wb-banner-error', err);
+          showToast('wb-toast-error', err);
           return;
         }
 
-        // 清空旧状态
         hideBanner();
         for (var j = 0; j < KEYS.length; j++) setItemStatus(KEYS[j], '', '');
 
@@ -166,8 +292,7 @@
         btn.disabled = true;
         $('saving-tip').textContent = '正在保存…';
 
-        // 顺序逐项保存，单条失败不中断后续，最后汇总结果
-        var results = {}; // key -> {ok, error}
+        var results = {}; // key -> { ok, error }
         function saveOne(idx) {
           if (idx >= KEYS.length) return Promise.resolve();
           var key = KEYS[idx];
@@ -184,23 +309,46 @@
             .then(function () { return saveOne(idx + 1); });
         }
 
-        saveOne(0)
-          .then(function () {
-            btn.disabled = false;
-            $('saving-tip').textContent = '';
-            var failed = KEYS.filter(function (k) { return !results[k].ok; });
-            if (failed.length === 0) {
-              showBanner('wb-banner-success', '全部 ' + KEYS.length + ' 项配置已保存。');
-            } else {
-              var detail = failed.map(function (k) { return k + ': ' + results[k].error; }).join('；');
-              showBanner('wb-banner-error', '部分配置保存失败（' + failed.length + '/' + KEYS.length + '）：' + detail);
-            }
-          });
+        saveOne(0).then(function () {
+          btn.disabled = false;
+          $('saving-tip').textContent = '';
+          var failed = KEYS.filter(function (k) { return !results[k].ok; });
+          if (failed.length === 0) {
+            showToast('wb-toast-success', '配置已保存');
+          } else {
+            var detail = failed.map(function (k) { return k + '：' + results[k].error; }).join('；');
+            showBanner('wb-banner-error', '部分配置保存失败（' + failed.length + '/' + KEYS.length + '）：' + detail);
+            showToast('wb-toast-error', '有 ' + failed.length + ' 项保存失败');
+          }
+        });
+      }
+
+      // 密码框显示/隐藏切换
+      function bindToggles() {
+        var btns = document.querySelectorAll('[data-toggle]');
+        for (var i = 0; i < btns.length; i++) {
+          (function (btn) {
+            btn.addEventListener('click', function () {
+              var id = btn.getAttribute('data-toggle');
+              var input = $(id);
+              if (!input) return;
+              if (input.type === 'password') {
+                input.type = 'text';
+                btn.textContent = '隐藏';
+              } else {
+                input.type = 'password';
+                btn.textContent = '显示';
+              }
+            });
+          })(btns[i]);
+        }
       }
 
       $('save-btn').addEventListener('click', save);
+      bindToggles();
 
-      WorkBuddyNav.mount('nav');
+      // 先挂导航，再加载配置回填
+      WorkBuddyNav.mount('nav').then(loadConfig, loadConfig);
     })();
   </script>
 </body>

@@ -109,6 +109,42 @@
     },
 
     /**
+     * 查询全部配置项。
+     * @returns {Promise<Object>} { configs: [{ config_key, config_value, updated_at }] }
+     */
+    getConfig: function () {
+      return _call('get_config');
+    },
+
+    /**
+     * 分页查询运行日志。
+     * @param {number} page - 页码，从 1 开始
+     * @param {number} size - 每页条数
+     * @param {string} [level] - 日志级别过滤（INFO/WARN/ERROR/DEBUG）
+     * @returns {Promise<Object>} { logs: [], total, page, size }
+     */
+    getLogs: function (page, size, level) {
+      return _call('get_logs', {
+        method: 'GET',
+        query: { page: page, size: size, level: level }
+      });
+    },
+
+    /**
+     * 分页查询归档邮件（支持 subject / from_name / from_mail 搜索）。
+     * @param {number} page - 页码，从 1 开始
+     * @param {number} size - 每页条数
+     * @param {string} [keyword] - 模糊搜索关键词
+     * @returns {Promise<Object>} { archives: [], total, page, size }
+     */
+    getArchives: function (page, size, keyword) {
+      return _call('get_archives', {
+        method: 'GET',
+        query: { page: page, size: size, keyword: keyword }
+      });
+    },
+
+    /**
      * 启停 worker。
      * @param {string} action - "start" 或 "stop"
      * @returns {Promise<Object>} { is_running, action }
@@ -171,10 +207,11 @@
         container.innerHTML =
           '<nav style="display:flex;gap:16px;padding:12px 16px;background:#fff;border-bottom:1px solid #e5e6eb;align-items:center;flex-wrap:wrap;">' +
           '<strong style="margin-right:8px;">🤖 WorkBuddy</strong>' +
-          '<a href="index.html" style="color:#3370ff;">仪表盘</a>' +
-          '<a href="archives.html" style="color:#4e5969;">归档邮件</a>' +
+          '<a href="index.html" style="color:#3370ff;">看板</a>' +
+          '<a href="control.html" style="color:#4e5969;">工作区</a>' +
           '<a href="config.html" style="color:#4e5969;">配置</a>' +
-          '<a href="control.html" style="color:#4e5969;">控制</a>' +
+          '<a href="logs.html" style="color:#4e5969;">日志</a>' +
+          '<a href="archives.html" style="color:#4e5969;">归档</a>' +
           '</nav>';
         console.warn('[WorkBuddyNav] 导航加载失败，使用降级导航:', err && err.message);
       });

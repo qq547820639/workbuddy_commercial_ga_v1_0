@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WorkBuddy · 专家团工作区</title>
+  <!--
+    专家团工作区页面。HTML/CSS/JS 全部内联，不依赖外部框架。
+    通过 URL 参数 ?team_key=xxx 指定团队；调用相对路径云函数：
+      GET  /api/get_team_detail?team_key=&status=
+      GET  /api/get_mission_detail?mission_id=
+      POST /api/plan_workitems          { mission_id }
+      POST /api/execute_agent_run       { work_item_id }
+      POST /api/trigger_approval        { mission_id, trigger_type }
+      POST /api/update_collaboration    { id, action }   （主理人接受/拒绝协作）
+    飞书 Design Tokens 风格，主色 #3370FF。
+  -->
+  <style>
+    /* ===== 基础重置与 Design Token ===== */
+    * { box-sizing: border-box; }
+    :root {
+      --wb-primary: #3370ff;
+      --wb-primary-hover: #2860e6;
+      --wb-primary-bg: #e8f0ff;
+      --wb-text-1: #1d2129;
+      --wb-text-2: #4e5969;
+      --wb-text-3: #86909c;
+      --wb-text-4: #c9cdd4;
+      --wb-border: #e5e6eb;
+      --wb-border-light: #f0f1f2;
+      --wb-bg-page: #f5f6f7;
+      --wb-bg-card: #ffffff;
+      --wb-bg-hover: #f7f9ff;
+      --wb-success: #00b42a;
+      --wb-success-bg: #e8ffea;
+      --wb-warn: #ff7d00;
+      --wb-warn-bg: #fff7e8;
+      --wb-danger: #f53f3f;
+      --wb-danger-bg: #ffece8;
+      --wb-radius: 8px;
+      --wb-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
+    }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+      background: var(--wb-bg-page);
+      color: var(--wb-text-1);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    a { color: var(--wb-primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ===== 顶部导航栏（同看板页面风格，内联） ===== */
+    .wb-nav {
+      display: flex; align-items: center; gap: 24px;
+      padding: 0 24px; height: 56px; background: #fff;
+      border-bottom: 1px solid var(--wb-border);
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+      position: sticky; top: 0; z-index: 100; flex-wrap: wrap;
+    }
+    .wb-nav-brand { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 600; color: var(--wb-text-1); white-space: nowrap; }
+    .wb-nav-logo { font-size: 22px; line-height: 1; }
+    .wb-nav-tabs { display: flex; align-items: center; gap: 4px; list-style: none; margin: 0; padding: 0; flex-wrap: wrap; }
+    .wb-nav-tabs a {
+      display: inline-block; padding: 8px 16px; font-size: 14px;
+      color: var(--wb-text-2); text-decoration: none; border-radius: 6px;
+      transition: background 0.15s, color 0.15s; white-space: nowrap;
+    }
+    .wb-nav-tabs a:hover { background: #f2f3f5; color: var(--wb-text-1); text-decoration: none; }
+    .wb-nav-tabs a.wb-nav-active { background: var(--wb-primary-bg); color: var(--wb-primary); font-weight: 600; }
+
+    /* ===== 布局 ===== */
+    .wb-container { max-width: 1280px; margin: 0 auto; padding: 24px; }
+    .wb-page-title { font-size: 22px; font-weight: 600; margin: 0 0 16px 0; }
+    .wb-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 20px;
+      align-items: start;
+    }
+
+    /* ===== 通用卡片 ===== */
+    .wb-card {
+      background: var(--wb-bg-card); border-radius: var(--wb-radius);
+      box-shadow: var(--wb-shadow); border: 1px solid var(--wb-border-light); overflow: hidden;
+    }
+    .wb-card-head { padding: 14px 20px; border-bottom: 1px solid var(--wb-border-light); display: flex; align-items: center; gap: 8px; }
+    .wb-card-head h2 { font-size: 16px; margin: 0; font-weight: 600; }
+    .wb-card-body { padding: 18px 20px; }
+
+    /* ===== 横幅 ===== */
+    .wb-banner { padding: 10px 16px; border-radius: 6px; font-size: 13px; margin-bottom: 16px; display: none; }
+    .wb-banner-error { background: var(--wb-danger-bg); color: var(--wb-danger); border: 1px solid #fdcdc5; }
+    .wb-banner-success { background: var(--wb-success-bg); color: var(--wb-success); border: 1px solid #b3e6bd; }
+    .wb-banner-info { background: var(--wb-primary-bg); color: var(--wb-primary); border: 1px solid #b8d4ff; }
+
+    /* ===== 左侧团队信息 ===== */
+    .wb-team-name { font-size: 18px; font-weight: 600; margin: 0 0 4px 0; word-break: break-word; }
+    .wb-team-key { color: var(--wb-text-3); font-size: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .wb-team-mission { color: var(--wb-text-2); font-size: 13px; margin-top: 12px; line-height: 1.7; }
+    .wb-team-meta { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
+    .wb-meta-row { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    .wb-meta-label { color: var(--wb-text-3); min-width: 64px; }
+    .wb-meta-value { color: var(--wb-text-1); }
+    .wb-active-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .wb-active-on { background: var(--wb-success); box-shadow: 0 0 0 3px rgba(0, 180, 42, 0.15); }
+    .wb-active-off { background: var(--wb-text-4); }
+    .wb-member-mini { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+    .wb-member-mini-item {
+      display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+      background: #fafbfc; border-radius: 6px; font-size: 13px;
+    }
+    .wb-member-mini-item .wb-mname { font-weight: 500; }
+    .wb-member-mini-item .wb-mrole { color: var(--wb-text-3); font-size: 12px; margin-left: auto; }
+
+    /* ===== 标签页 ===== */
+    .wb-tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--wb-border-light); padding: 0 20px; }
+    .wb-tab {
+      padding: 12px 16px; font-size: 14px; color: var(--wb-text-2); cursor: pointer;
+      border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s;
+      background: none; border-top: none; border-left: none; border-right: none; font-family: inherit;
+    }
+    .wb-tab:hover { color: var(--wb-primary); }
+    .wb-tab.wb-tab-active { color: var(--wb-primary); border-bottom-color: var(--wb-primary); font-weight: 600; }
+    .wb-tab-pane { display: none; padding: 18px 20px; }
+    .wb-tab-pane.wb-active { display: block; }
+
+    /* ===== 工具栏 ===== */
+    .wb-toolbar { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+    .wb-seg { display: inline-flex; background: #f2f3f5; border-radius: 6px; padding: 2px; }
+    .wb-seg-btn {
+      border: none; background: none; padding: 6px 14px; font-size: 13px; color: var(--wb-text-2);
+      border-radius: 4px; cursor: pointer; font-family: inherit;
+    }
+    .wb-seg-btn.wb-seg-active { background: #fff; color: var(--wb-primary); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+    .wb-toolbar .wb-spacer { margin-left: auto; }
+    .wb-auto-tag { font-size: 12px; color: var(--wb-primary); background: var(--wb-primary-bg); padding: 3px 10px; border-radius: 10px; }
+
+    /* ===== 按钮 ===== */
+    .wb-btn {
+      height: 32px; padding: 0 14px; border: 1px solid var(--wb-primary); background: var(--wb-primary);
+      color: #fff; border-radius: 6px; font-size: 13px; cursor: pointer; transition: background 0.15s;
+      white-space: nowrap; font-family: inherit;
+    }
+    .wb-btn:hover:not(:disabled) { background: var(--wb-primary-hover); border-color: var(--wb-primary-hover); }
+    .wb-btn:disabled { background: #a8c7ff; border-color: #a8c7ff; cursor: not-allowed; }
+    .wb-btn-ghost { background: #fff; color: var(--wb-primary); }
+    .wb-btn-ghost:hover:not(:disabled) { background: var(--wb-primary-bg); }
+    .wb-btn-sm { height: 28px; padding: 0 10px; font-size: 12px; }
+    .wb-btn-success { background: var(--wb-success); border-color: var(--wb-success); }
+    .wb-btn-success:hover:not(:disabled) { background: #009a26; border-color: #009a26; }
+    .wb-btn-danger { background: var(--wb-danger); border-color: var(--wb-danger); }
+    .wb-btn-danger:hover:not(:disabled) { background: #d93636; border-color: #d93636; }
+
+    /* ===== 状态标签 ===== */
+    .wb-tag { display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 12px; line-height: 1.6; white-space: nowrap; }
+    .wb-tag-green { color: var(--wb-success); background: var(--wb-success-bg); }
+    .wb-tag-blue { color: var(--wb-primary); background: var(--wb-primary-bg); }
+    .wb-tag-orange { color: var(--wb-warn); background: var(--wb-warn-bg); }
+    .wb-tag-red { color: var(--wb-danger); background: var(--wb-danger-bg); }
+    .wb-tag-gray { color: var(--wb-text-3); background: #f2f3f5; }
+    .wb-tag-purple { color: #722ed1; background: #f5e8ff; }
+    .wb-risk-high { color: var(--wb-danger); background: var(--wb-danger-bg); }
+    .wb-risk-medium { color: var(--wb-warn); background: var(--wb-warn-bg); }
+    .wb-risk-low { color: var(--wb-success); background: var(--wb-success-bg); }
+    .wb-risk-unknown { color: var(--wb-text-3); background: #f2f3f5; }
+
+    /* 长期成员（AgentProfile）与执行实例（AgentRun）显式区分 */
+    .wb-badge-profile {
+      display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 12px;
+      color: var(--wb-primary); background: #fff; border: 1px solid #b8d4ff;
+    }
+    .wb-badge-run {
+      display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 12px;
+      color: #fff; background: var(--wb-primary);
+    }
+    .wb-badge-lead { display: inline-block; padding: 1px 8px; border-radius: 4px; font-size: 12px; color: #722ed1; background: #f5e8ff; }
+
+    /* ===== Mission 卡片 ===== */
+    .wb-mission { border: 1px solid var(--wb-border-light); border-radius: var(--wb-radius); background: #fff; margin-bottom: 12px; overflow: hidden; }
+    .wb-mission-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px; cursor: pointer; transition: background 0.15s; }
+    .wb-mission-head:hover { background: var(--wb-bg-hover); }
+    .wb-mission-chev { color: var(--wb-text-3); transition: transform 0.15s; flex-shrink: 0; font-size: 12px; }
+    .wb-mission.open .wb-mission-chev { transform: rotate(90deg); }
+    .wb-mission-title { font-size: 15px; font-weight: 600; color: var(--wb-text-1); flex: 1; min-width: 0; word-break: break-word; }
+    .wb-mission-objective { color: var(--wb-text-2); font-size: 13px; margin: 4px 0 0 0; }
+    .wb-mission-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--wb-text-3); margin-top: 8px; }
+    .wb-progress { display: inline-flex; align-items: center; gap: 6px; }
+    .wb-progress-bar { width: 80px; height: 6px; background: #f2f3f5; border-radius: 3px; overflow: hidden; }
+    .wb-progress-fill { height: 100%; background: var(--wb-success); border-radius: 3px; transition: width 0.3s; }
+    .wb-mission-body { display: none; padding: 0 16px 16px 16px; border-top: 1px dashed var(--wb-border); }
+    .wb-mission.open .wb-mission-body { display: block; }
+    .wb-action-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 12px 0; }
+
+    /* ===== WorkItem / AgentRun ===== */
+    .wb-wi-list { display: flex; flex-direction: column; gap: 8px; }
+    .wb-wi {
+      border: 1px solid var(--wb-border-light); border-radius: 6px; padding: 10px 12px; background: #fafbfc;
+    }
+    .wb-wi-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .wb-wi-seq { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; border-radius: 4px; background: var(--wb-primary-bg); color: var(--wb-primary); font-size: 12px; font-weight: 600; }
+    .wb-wi-title { font-weight: 500; color: var(--wb-text-1); flex: 1; min-width: 0; word-break: break-word; }
+    .wb-wi-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; color: var(--wb-text-3); margin-top: 6px; }
+    .wb-runs { margin-top: 8px; padding-left: 12px; border-left: 2px solid var(--wb-primary-bg); display: flex; flex-direction: column; gap: 4px; }
+    .wb-run-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--wb-text-2); flex-wrap: wrap; }
+    .wb-run-time { color: var(--wb-text-3); font-variant-numeric: tabular-nums; }
+    .wb-sub-section { margin-top: 14px; }
+    .wb-sub-title { font-size: 13px; font-weight: 600; color: var(--wb-text-2); margin: 0 0 8px 0; }
+    .wb-artifact-list, .wb-evidence-list { display: flex; flex-direction: column; gap: 4px; }
+    .wb-artifact-item, .wb-evidence-item { font-size: 12px; color: var(--wb-text-2); padding: 6px 10px; background: #fafbfc; border-radius: 4px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+    /* ===== 协作列表 ===== */
+    .wb-collab { border: 1px solid var(--wb-border-light); border-radius: var(--wb-radius); padding: 14px 16px; background: #fff; margin-bottom: 12px; }
+    .wb-collab-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+    .wb-collab-obj { color: var(--wb-text-1); font-weight: 500; flex: 1; min-width: 0; }
+    .wb-collab-meta { font-size: 12px; color: var(--wb-text-3); display: flex; gap: 12px; flex-wrap: wrap; }
+    .wb-collab-actions { margin-top: 10px; display: flex; gap: 8px; }
+
+    /* ===== 成员表 ===== */
+    .wb-table { width: 100%; border-collapse: collapse; }
+    .wb-table th { text-align: left; padding: 10px 12px; font-size: 12px; color: var(--wb-text-3); font-weight: 600; background: #fafbfc; border-bottom: 1px solid var(--wb-border-light); }
+    .wb-table td { padding: 10px 12px; border-bottom: 1px solid #f7f8fa; vertical-align: top; font-size: 13px; }
+    .wb-table tr:last-child td { border-bottom: none; }
+    .wb-lifecycle { margin-top: 16px; padding: 12px 14px; background: #fafbfc; border-radius: 6px; font-size: 12px; color: var(--wb-text-2); line-height: 1.8; }
+    .wb-lifecycle strong { color: var(--wb-text-1); }
+
+    /* ===== 杂项 ===== */
+    .wb-empty { padding: 40px 20px; text-align: center; color: var(--wb-text-4); }
+    .wb-loading { padding: 40px 20px; text-align: center; color: var(--wb-text-3); }
+    .wb-skel { display: inline-block; height: 14px; background: #f2f3f5; border-radius: 4px; width: 80%; animation: wb-pulse 1.2s ease-in-out infinite; }
+    @keyframes wb-pulse { 0%,100%{opacity:1} 50%{opacity:0.5} }
+    .wb-team-picker { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .wb-select {
+      height: 32px; padding: 0 10px; border: 1px solid var(--wb-border); border-radius: 6px;
+      font-size: 13px; background: #fff; color: var(--wb-text-1); font-family: inherit; outline: none;
+    }
+    .wb-select:focus { border-color: var(--wb-primary); }
+
+    /* ===== 响应式 ===== */
+    @media (max-width: 960px) {
+      .wb-layout { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 640px) {
+      .wb-container { padding: 16px; }
+      .wb-nav { height: auto; padding: 12px 16px; flex-direction: column; align-items: flex-start; gap: 12px; }
+      .wb-nav-tabs { width: 100%; overflow-x: auto; }
+      .wb-mission-head { flex-wrap: wrap; }
+      .wb-progress-bar { width: 56px; }
+    }
+  </style>
+</head>
+<body>
+  <!-- 顶部导航栏（同看板页面风格，内联实现） -->
+  <nav class="wb-nav">
+    <div class="wb-nav-brand">
+      <span class="wb-nav-logo">🤖</span>
+      <span>WorkBuddy</span>
+    </div>
+    <ul class="wb-nav-tabs">
+      <li><a href="index.html" data-tab="dashboard">仪表盘</a></li>
+      <li><a href="archives.html" data-tab="archives">归档邮件</a></li>
+      <li><a href="team_workspace.html" class="wb-nav-active" data-tab="workspace">专家团工作区</a></li>
+      <li><a href="config.html" data-tab="config">配置</a></li>
+      <li><a href="control.html" data-tab="control">控制</a></li>
+    </ul>
+  </nav>
+
+  <div class="wb-container">
+    <h1 class="wb-page-title">专家团工作区</h1>
+    <div id="banner-error" class="wb-banner wb-banner-error"></div>
+    <div id="banner-success" class="wb-banner wb-banner-success"></div>
+
+    <!-- 团队选择器（team_key 缺失时显示） -->
+    <div id="team-picker" class="wb-card" style="display:none; margin-bottom:16px;">
+      <div class="wb-card-body">
+        <div class="wb-team-picker">
+          <span style="color:var(--wb-text-2);">选择专家团：</span>
+          <select id="team-picker-select" class="wb-select"></select>
+          <button id="team-picker-go" class="wb-btn">进入工作区</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 主布局：左 团队信息 / 右 标签页 -->
+    <div id="workspace" class="wb-layout" style="display:none;">
+      <!-- 左侧：团队信息 -->
+      <aside class="wb-card" id="team-info-card">
+        <div class="wb-card-body">
+          <div id="team-skel" class="wb-loading"><span class="wb-skel"></span></div>
+          <div id="team-info" style="display:none;">
+            <h2 class="wb-team-name" id="team-name">—</h2>
+            <div class="wb-team-key" id="team-key">—</div>
+            <div class="wb-team-mission" id="team-mission"></div>
+            <div class="wb-team-meta">
+              <div class="wb-meta-row">
+                <span class="wb-meta-label">主理人</span>
+                <span class="wb-meta-value" id="team-lead">—</span>
+              </div>
+              <div class="wb-meta-row">
+                <span class="wb-meta-label">状态</span>
+                <span class="wb-meta-value" id="team-active">—</span>
+              </div>
+              <div class="wb-meta-row">
+                <span class="wb-meta-label">成员数</span>
+                <span class="wb-meta-value" id="team-member-count">—</span>
+              </div>
+            </div>
+            <div class="wb-member-mini" id="team-members-mini"></div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- 右侧：标签页 -->
+      <section class="wb-card">
+        <div class="wb-tabs">
+          <button class="wb-tab wb-tab-active" data-tab="missions">任务</button>
+          <button class="wb-tab" data-tab="collaborations">协作</button>
+          <button class="wb-tab" data-tab="members">成员</button>
+        </div>
+
+        <!-- 任务标签页 -->
+        <div class="wb-tab-pane wb-active" id="pane-missions">
+          <div class="wb-toolbar">
+            <div class="wb-seg" role="group" aria-label="任务状态过滤">
+              <button class="wb-seg-btn wb-seg-active" data-filter="active">进行中</button>
+              <button class="wb-seg-btn" data-filter="all">全部</button>
+            </div>
+            <span class="wb-spacer"></span>
+            <span class="wb-auto-tag">进行中数据每 15s 自动刷新</span>
+          </div>
+          <div id="mission-list">
+            <div class="wb-loading">加载中…</div>
+          </div>
+        </div>
+
+        <!-- 协作标签页 -->
+        <div class="wb-tab-pane" id="pane-collaborations">
+          <div id="collab-list">
+            <div class="wb-loading">加载中…</div>
+          </div>
+        </div>
+
+        <!-- 成员标签页 -->
+        <div class="wb-tab-pane" id="pane-members">
+          <div id="member-list">
+            <div class="wb-loading">加载中…</div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script>
+    'use strict';
+    (function () {
+      // ===== 配置 =====
+      var API_BASE = '/api';
+      var REFRESH_INTERVAL = 15000; // 15 秒自动刷新
+      var REFRESH_TAB_HIDDEN_PAUSE = true;
+
+      // 已知的专家团（用于 team_key 缺失时的选择器，来源于种子数据）
+      var KNOWN_TEAMS = [
+        { team_key: 'customer_success', name: '客户成功与服务专家团' },
+        { team_key: 'finance_ops', name: '财务与运营专家团' },
+        { team_key: 'hr_people', name: 'HR 与人事专家团' },
+        { team_key: 'operations_delivery', name: '运营与交付专家团' },
+        { team_key: 'sales_growth', name: '销售与商务增长专家团' }
+      ];
+
+      // 终态状态（用于判断"进行中"与刷新必要性）
+      var MISSION_TERMINAL = { COMPLETED: 1, CANCELLED: 1, FAILED: 1 };
+
+      // 状态 → 标签颜色映射
+      var STATUS_COLOR = {
+        // Mission
+        COMPLETED: 'green', APPROVED: 'green', VERIFYING: 'green',
+        CANCELLED: 'red', FAILED: 'red', BLOCKED: 'red', NEEDS_INFORMATION: 'orange',
+        APPROVAL_REQUIRED: 'orange', PENDING_APPROVAL: 'orange', LEAD_REVIEW: 'orange',
+        SUBMITTED: 'orange',
+        ROUTED: 'blue', PLANNING: 'blue', READY: 'blue', EXECUTING: 'blue',
+        ACTION_EXECUTING: 'blue', LEAD_TRIAGE: 'blue', DISPATCH_REVIEW: 'blue',
+        INGESTED: 'gray', UNKNOWN: 'gray',
+        // WorkItem
+        DONE: 'green', ACCEPTED: 'green',
+        RUNNING: 'blue', ASSIGNED: 'blue',
+        DRAFT: 'gray', READY: 'gray', WAITING_DEPENDENCY: 'gray',
+        REVISION_REQUIRED: 'orange',
+        // AgentRun
+        SUCCEEDED: 'green', CLOSED: 'green',
+        RUNNING: 'blue', TOOL_WAIT: 'blue', CONTEXT_PREPARED: 'blue', OUTPUT_SUBMITTED: 'blue',
+        CREATED: 'gray',
+        TIMED_OUT: 'red', QUARANTINED: 'red',
+        // Collaboration
+        IN_PROGRESS: 'blue'
+      };
+
+      // ===== 运行状态 =====
+      var state = {
+        teamKey: null,
+        missionFilter: 'active', // active | all
+        activeTab: 'missions',
+        team: null,
+        members: [],
+        missions: [], // 来自 get_team_detail（含 work_items，无 agent_runs）
+        collaborations: [],
+        expandedMissionId: null,
+        missionDetailCache: {}, // mission_id -> detail（含 agent_runs）
+        loadingDetail: {},
+        refreshTimer: null
+      };
+
+      // ===== 工具函数 =====
+      function $(id) { return document.getElementById(id); }
+      function esc(s) {
+        return String(s == null ? '' : s)
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+      }
+      function fmtTime(s) {
+        if (!s) return '—';
+        var str = String(s).replace(' ', 'T');
+        var d = new Date(str);
+        if (isNaN(d.getTime())) return String(s);
+        var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+          ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+      }
+      function truncate(s, n) {
+        s = s == null ? '' : String(s);
+        return s.length > n ? s.slice(0, n) + '…' : s;
+      }
+      function tagFor(status) {
+        var s = String(status || 'UNKNOWN').toUpperCase();
+        var color = STATUS_COLOR[s] || 'gray';
+        return '<span class="wb-tag wb-tag-' + color + '">' + esc(s) + '</span>';
+      }
+      function riskTag(level) {
+        var l = String(level || 'unknown').toLowerCase();
+        var cls = 'wb-risk-unknown';
+        if (l === 'high') cls = 'wb-risk-high';
+        else if (l === 'medium') cls = 'wb-risk-medium';
+        else if (l === 'low') cls = 'wb-risk-low';
+        return '<span class="wb-tag ' + cls + '">' + esc(l) + '</span>';
+      }
+      function showError(msg) {
+        var b = $('banner-error');
+        b.textContent = msg;
+        b.style.display = 'block';
+      }
+      function clearError() { $('banner-error').style.display = 'none'; }
+      function showSuccess(msg) {
+        var b = $('banner-success');
+        b.textContent = msg;
+        b.style.display = 'block';
+        setTimeout(function () { b.style.display = 'none'; }, 3000);
+      }
+
+      // ===== API 封装（相对路径 fetch） =====
+      function buildQuery(query) {
+        if (!query) return '';
+        var parts = Object.keys(query).filter(function (k) {
+          var v = query[k]; return v !== null && v !== undefined && v !== '';
+        }).map(function (k) {
+          return encodeURIComponent(k) + '=' + encodeURIComponent(query[k]);
+        });
+        return parts.length ? '?' + parts.join('&') : '';
+      }
+      // GET 读取类：兼容 { ok, data } 与 { ok, ...直挂字段 } 两种返回
+      function apiGet(name, query) {
+        var url = API_BASE + '/' + name + buildQuery(query);
+        return fetch(url, { method: 'GET', headers: { Accept: 'application/json' } })
+          .then(function (resp) {
+            return resp.json().then(function (json) {
+              if (!resp.ok || !json || json.ok === false) {
+                throw new Error((json && json.error) ? json.error : ('HTTP ' + resp.status));
+              }
+              // 优先取 data，否则返回整个 json（去掉 ok 标志后的直挂字段）
+              return json.data != null ? json.data : json;
+            }, function () {
+              throw new Error('云函数 ' + name + ' 返回非 JSON（HTTP ' + resp.status + '）');
+            });
+          });
+      }
+      // POST 变更类：返回完整 json（含 ok 与各业务字段）
+      function apiPost(name, body) {
+        var url = API_BASE + '/' + name;
+        return fetch(url, {
+          method: 'POST',
+          headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+          body: JSON.stringify(body || {})
+        }).then(function (resp) {
+          return resp.json().then(function (json) {
+            if (!resp.ok || !json || json.ok === false) {
+              throw new Error((json && json.error) ? json.error : ('HTTP ' + resp.status));
+            }
+            return json;
+          }, function () {
+            throw new Error('云函数 ' + name + ' 返回非 JSON（HTTP ' + resp.status + '）');
+          });
+        });
+      }
+
+      function getTeamDetail(teamKey, status) {
+        return apiGet('get_team_detail', { team_key: teamKey, status: status });
+      }
+      function getMissionDetail(missionId) {
+        return apiGet('get_mission_detail', { mission_id: missionId });
+      }
+
+      // ===== URL 参数 =====
+      function getParam(name) {
+        var m = new RegExp('[?&]' + name + '=([^&]*)').exec(window.location.search);
+        return m ? decodeURIComponent(m[1]) : '';
+      }
+      function setTeamKeyInUrl(teamKey) {
+        var url = window.location.pathname + '?team_key=' + encodeURIComponent(teamKey);
+        window.history.replaceState({}, '', url);
+      }
+
+      // ===== 渲染：团队信息 =====
+      function renderTeamInfo() {
+        var t = state.team || {};
+        $('team-skel').style.display = 'none';
+        $('team-info').style.display = 'block';
+        $('team-name').textContent = t.name || '—';
+        $('team-key').textContent = t.team_key || '';
+        $('team-mission').textContent = t.mission || '暂无使命描述';
+        $('team-lead').innerHTML = esc(t.lead_role_name || '—') +
+          (t.lead_role_key ? ' <span style="color:var(--wb-text-3);font-size:12px;">(' + esc(t.lead_role_key) + ')</span>' : '');
+        var active = t.active === true || t.active === 1 || t.active === 'true';
+        $('team-active').innerHTML = '<span class="wb-active-dot ' + (active ? 'wb-active-on' : 'wb-active-off') + '"></span> ' +
+          (active ? '启用' : '停用');
+        $('team-member-count').textContent = String(state.members.length);
+
+        // 成员迷你列表（最多展示全部，主理人置顶已在 SQL 排序）
+        var mini = $('team-members-mini');
+        if (!state.members.length) {
+          mini.innerHTML = '<div style="color:var(--wb-text-4);font-size:12px;">暂无成员</div>';
+        } else {
+          var html = '';
+          for (var i = 0; i < state.members.length; i++) {
+            var m = state.members[i];
+            html += '<div class="wb-member-mini-item">' +
+              '<span class="wb-mname">' + esc(m.name) + '</span>' +
+              (m.is_lead ? '<span class="wb-badge-lead">主理人</span>' : '') +
+              '<span class="wb-mrole">' + esc(m.role_key) + '</span>' +
+              '</div>';
+          }
+          mini.innerHTML = html;
+        }
+      }
+
+      // ===== 渲染：任务列表 =====
+      function missionProgress(mission) {
+        var items = mission.work_items || [];
+        var done = 0;
+        for (var i = 0; i < items.length; i++) {
+          var st = String(items[i].status || '').toUpperCase();
+          if (st === 'DONE' || st === 'ACCEPTED') done++;
+        }
+        return { done: done, total: items.length };
+      }
+
+      function renderMissions() {
+        var box = $('mission-list');
+        if (!state.missions || state.missions.length === 0) {
+          box.innerHTML = '<div class="wb-empty">暂无任务</div>';
+          return;
+        }
+        var html = '';
+        for (var i = 0; i < state.missions.length; i++) {
+          var ms = state.missions[i];
+          var mid = ms.id != null ? ms.id : ms.mission_id;
+          var prog = missionProgress(ms);
+          var pct = prog.total > 0 ? Math.round((prog.done / prog.total) * 100) : 0;
+          var open = state.expandedMissionId != null && String(state.expandedMissionId) === String(mid);
+          html += '<div class="wb-mission' + (open ? ' open' : '') + '" data-mid="' + esc(mid) + '">' +
+            '<div class="wb-mission-head" data-toggle="' + esc(mid) + '">' +
+              '<span class="wb-mission-chev">▶</span>' +
+              '<div style="flex:1;min-width:0;">' +
+                '<div class="wb-mission-title">' + esc(ms.title || '未命名任务') + '</div>' +
+                (ms.objective ? '<div class="wb-mission-objective">' + esc(truncate(ms.objective, 160)) + '</div>' : '') +
+                '<div class="wb-mission-meta">' +
+                  tagFor(ms.status) +
+                  (ms.risk_level ? riskTag(ms.risk_level) : '') +
+                  (ms.lead_agent_name ? '<span>主理人：' + esc(ms.lead_agent_name) + '</span>' : '') +
+                  (ms.created_at ? '<span>' + esc(fmtTime(ms.created_at)) + '</span>' : '') +
+                  '<span class="wb-progress">' +
+                    '<span class="wb-progress-bar"><span class="wb-progress-fill" style="width:' + pct + '%;"></span></span>' +
+                    '<span>' + prog.done + '/' + prog.total + '</span>' +
+                  '</span>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+            '<div class="wb-mission-body" data-body="' + esc(mid) + '">' +
+              renderMissionBody(ms, mid) +
+            '</div>' +
+          '</div>';
+        }
+        box.innerHTML = html;
+        bindMissionEvents();
+      }
+
+      // Mission 展开区：动作按钮 + WorkItem/AgentRun（优先用缓存的详情）
+      function renderMissionBody(mission, mid) {
+        var detail = state.missionDetailCache[mid];
+        var items = detail ? (detail.work_items || []) : (mission.work_items || []);
+        var artifacts = detail ? (detail.artifacts || []) : [];
+        var evidence = detail ? (detail.evidence || []) : [];
+
+        var html = '';
+        // 主理人操作按钮
+        html += '<div class="wb-action-row">' +
+          '<button class="wb-btn wb-btn-sm" data-act="plan" data-mid="' + esc(mid) + '">生成清单</button>' +
+          '<button class="wb-btn wb-btn-sm wb-btn-ghost" data-act="execute" data-mid="' + esc(mid) + '">启动执行</button>' +
+          '<button class="wb-btn wb-btn-sm wb-btn-ghost" data-act="approve" data-mid="' + esc(mid) + '">提交审批</button>' +
+          '</div>';
+
+        if (state.loadingDetail[mid]) {
+          html += '<div class="wb-loading">加载工作项详情…</div>';
+          return html;
+        }
+
+        // WorkItem 列表 + AgentRun
+        if (!items.length) {
+          html += '<div class="wb-empty" style="padding:20px;">暂无工作项</div>';
+        } else {
+          html += '<div class="wb-wi-list">';
+          for (var i = 0; i < items.length; i++) {
+            html += renderWorkItem(items[i]);
+          }
+          html += '</div>';
+        }
+
+        // 产物 / 证据
+        if (artifacts.length || evidence.length) {
+          html += '<div class="wb-sub-section">';
+          html += '<p class="wb-sub-title">产物与证据</p>';
+          if (artifacts.length) {
+            html += '<div class="wb-artifact-list">';
+            for (var a = 0; a < artifacts.length; a++) {
+              var ar = artifacts[a];
+              html += '<div class="wb-artifact-item">' +
+                '<span class="wb-tag wb-tag-blue">' + esc(ar.artifact_type || 'artifact') + '</span>' +
+                (ar.content_hash ? '<span style="font-family:ui-monospace,monospace;">' + esc(truncate(ar.content_hash, 24)) + '</span>' : '') +
+                (ar.created_at ? '<span class="wb-run-time">' + esc(fmtTime(ar.created_at)) + '</span>' : '') +
+                '</div>';
+            }
+            html += '</div>';
+          }
+          if (evidence.length) {
+            html += '<div class="wb-evidence-list" style="margin-top:6px;">';
+            for (var e = 0; e < evidence.length; e++) {
+              var ev = evidence[e];
+              html += '<div class="wb-evidence-item">' +
+                '<span class="wb-tag ' + (String(ev.status).toLowerCase() === 'verified' ? 'wb-tag-green' : (String(ev.status).toLowerCase() === 'rejected' ? 'wb-tag-red' : 'wb-tag-gray')) + '">' + esc(ev.status || '—') + '</span>' +
+                '<span>' + esc(ev.evidence_type || 'evidence') + '</span>' +
+                (ev.observed_at ? '<span class="wb-run-time">' + esc(fmtTime(ev.observed_at)) + '</span>' : '') +
+                '</div>';
+            }
+            html += '</div>';
+          }
+          html += '</div>';
+        }
+        return html;
+      }
+
+      function renderWorkItem(item) {
+        var runs = item.agent_runs || [];
+        var html = '<div class="wb-wi">' +
+          '<div class="wb-wi-head">' +
+            '<span class="wb-wi-seq">' + esc(item.sequence != null ? item.sequence : '#') + '</span>' +
+            '<span class="wb-wi-title">' + esc(item.title || item.item_key || '工作项') + '</span>' +
+            tagFor(item.status) +
+            '<button class="wb-btn wb-btn-sm wb-btn-ghost" data-act="execute-wi" data-wid="' + esc(item.id) + '">启动执行</button>' +
+          '</div>' +
+          '<div class="wb-wi-meta">' +
+            // 显式标注：长期成员（AgentProfile）
+            (item.assigned_agent_name ? '<span class="wb-badge-profile">长期成员 AgentProfile</span><span>' + esc(item.assigned_agent_name) + '</span>' : '') +
+            (item.assigned_role ? '<span>角色：' + esc(item.assigned_role) + '</span>' : '') +
+            (item.skill_name ? '<span>技能：' + esc(item.skill_name) + '</span>' : '') +
+            (item.item_key ? '<span style="font-family:ui-monospace,monospace;">' + esc(item.item_key) + '</span>' : '') +
+          '</div>';
+
+        // AgentRun 执行实例列表
+        if (runs.length) {
+          html += '<div class="wb-runs">';
+          for (var r = 0; r < runs.length; r++) {
+            var run = runs[r];
+            html += '<div class="wb-run-item">' +
+              '<span class="wb-badge-run">执行实例 AgentRun</span>' +
+              '<span>' + esc(run.agent_name || '—') + '</span>' +
+              tagFor(run.status) +
+              (run.started_at ? '<span class="wb-run-time">开始 ' + esc(fmtTime(run.started_at)) + '</span>' : '') +
+              (run.finished_at ? '<span class="wb-run-time">结束 ' + esc(fmtTime(run.finished_at)) + '</span>' : '') +
+              (run.close_reason ? '<span>原因：' + esc(run.close_reason) + '</span>' : '') +
+              (run.context_cleared ? '<span class="wb-tag wb-tag-gray">上下文已清理</span>' : '') +
+              '</div>';
+          }
+          html += '</div>';
+        }
+        html += '</div>';
+        return html;
+      }
+
+      function bindMissionEvents() {
+        // 展开/收起
+        var heads = document.querySelectorAll('.wb-mission-head[data-toggle]');
+        for (var i = 0; i < heads.length; i++) {
+          (function (el) {
+            el.addEventListener('click', function (e) {
+              if (e.target && e.target.getAttribute('data-act')) return; // 点按钮不触发展开
+              var mid = el.getAttribute('data-toggle');
+              toggleMission(mid);
+            });
+          })(heads[i]);
+        }
+        // 动作按钮
+        var btns = document.querySelectorAll('[data-act]');
+        for (var j = 0; j < btns.length; j++) {
+          (function (btn) {
+            btn.addEventListener('click', function (e) {
+              e.stopPropagation();
+              var act = btn.getAttribute('data-act');
+              if (act === 'plan') onPlan(btn);
+              else if (act === 'execute') onExecuteMission(btn);
+              else if (act === 'approve') onApprove(btn);
+              else if (act === 'execute-wi') onExecuteWorkItem(btn);
+            });
+          })(btns[j]);
+        }
+      }
+
+      function toggleMission(mid) {
+        if (state.expandedMissionId != null && String(state.expandedMissionId) === String(mid)) {
+          state.expandedMissionId = null;
+        } else {
+          state.expandedMissionId = mid;
+          // 懒加载任务详情（获取 agent_runs / artifacts / evidence）
+          if (!state.missionDetailCache[mid] && !state.loadingDetail[mid]) {
+            loadMissionDetail(mid);
+          }
+        }
+        renderMissions();
+      }
+
+      function loadMissionDetail(mid) {
+        state.loadingDetail[mid] = true;
+        getMissionDetail(mid).then(function (data) {
+          state.missionDetailCache[mid] = data;
+          state.loadingDetail[mid] = false;
+          // 同步基础 mission 字段（如状态可能已变化）
+          if (data && data.mission) {
+            for (var i = 0; i < state.missions.length; i++) {
+              if (String(state.missions[i].id) === String(mid)) {
+                state.missions[i] = Object.assign({}, state.missions[i], data.mission);
+                break;
+              }
+            }
+          }
+          if (String(state.expandedMissionId) === String(mid)) renderMissions();
+        }).catch(function (err) {
+          state.loadingDetail[mid] = false;
+          showError('加载任务详情失败：' + (err && err.message ? err.message : err));
+          if (String(state.expandedMissionId) === String(mid)) renderMissions();
+        });
+      }
+
+      // ===== 主理人动作 =====
+      function onPlan(btn) {
+        var mid = btn.getAttribute('data-mid');
+        btn.disabled = true; var old = btn.textContent; btn.textContent = '生成中…';
+        apiPost('plan_workitems', { mission_id: mid }).then(function (json) {
+          btn.disabled = false; btn.textContent = old;
+          var n = json && json.work_items ? json.work_items.length : 0;
+          showSuccess('已生成工作项清单' + (n ? '（' + n + ' 项）' : ''));
+          delete state.missionDetailCache[mid]; // 清缓存以便重新拉取
+          loadMissionDetail(mid);
+          refreshTeamDetail();
+        }).catch(function (err) {
+          btn.disabled = false; btn.textContent = old;
+          showError('生成清单失败：' + (err && err.message ? err.message : err));
+        });
+      }
+      function onExecuteMission(btn) {
+        var mid = btn.getAttribute('data-mid');
+        var detail = state.missionDetailCache[mid];
+        var items = detail ? (detail.work_items || []) : [];
+        // 找到第一个可执行的工作项（ASSIGNED/READY/DRAFT）
+        var target = null;
+        for (var i = 0; i < items.length; i++) {
+          var st = String(items[i].status || '').toUpperCase();
+          if (st === 'ASSIGNED' || st === 'READY' || st === 'DRAFT' || st === 'RUNNING') { target = items[i]; break; }
+        }
+        if (!target) {
+          showError('没有可执行的工作项（需先生成清单或分配工作项）');
+          return;
+        }
+        btn.disabled = true; var old = btn.textContent; btn.textContent = '执行中…';
+        apiPost('execute_agent_run', { work_item_id: target.id }).then(function () {
+          btn.disabled = false; btn.textContent = old;
+          showSuccess('已启动执行：' + (target.title || target.item_key));
+          delete state.missionDetailCache[mid];
+          loadMissionDetail(mid);
+        }).catch(function (err) {
+          btn.disabled = false; btn.textContent = old;
+          showError('启动执行失败：' + (err && err.message ? err.message : err));
+        });
+      }
+      function onExecuteWorkItem(btn) {
+        var wid = btn.getAttribute('data-wid');
+        btn.disabled = true; var old = btn.textContent; btn.textContent = '执行中…';
+        apiPost('execute_agent_run', { work_item_id: wid }).then(function () {
+          btn.disabled = false; btn.textContent = old;
+          showSuccess('已启动工作项执行');
+          // 刷新当前展开 mission 的详情
+          if (state.expandedMissionId != null) {
+            delete state.missionDetailCache[state.expandedMissionId];
+            loadMissionDetail(state.expandedMissionId);
+          }
+        }).catch(function (err) {
+          btn.disabled = false; btn.textContent = old;
+          showError('启动执行失败：' + (err && err.message ? err.message : err));
+        });
+      }
+      function onApprove(btn) {
+        var mid = btn.getAttribute('data-mid');
+        btn.disabled = true; var old = btn.textContent; btn.textContent = '提交中…';
+        // 默认使用 external_send 作为通用对外动作审批触发类型
+        apiPost('trigger_approval', { mission_id: mid, trigger_type: 'external_send' }).then(function (json) {
+          btn.disabled = false; btn.textContent = old;
+          showSuccess('已提交审批' + (json && json.approval_instance_id ? '（实例：' + json.approval_instance_id + '）' : ''));
+          refreshTeamDetail();
+        }).catch(function (err) {
+          btn.disabled = false; btn.textContent = old;
+          showError('提交审批失败：' + (err && err.message ? err.message : err));
+        });
+      }
+
+      // ===== 渲染：协作 =====
+      function renderCollaborations() {
+        var box = $('collab-list');
+        if (!state.collaborations || state.collaborations.length === 0) {
+          box.innerHTML = '<div class="wb-empty">暂无收到的协作请求</div>';
+          return;
+        }
+        var html = '';
+        for (var i = 0; i < state.collaborations.length; i++) {
+          var c = state.collaborations[i];
+          var st = String(c.status || '').toUpperCase();
+          var pending = st === 'PENDING';
+          html += '<div class="wb-collab">' +
+            '<div class="wb-collab-head">' +
+              '<span class="wb-tag wb-tag-blue">来自 ' + esc(c.from_team_key || '—') + '</span>' +
+              tagFor(c.status) +
+              '<span class="wb-collab-obj">' + esc(c.objective || '—') + '</span>' +
+            '</div>' +
+            '<div class="wb-collab-meta">' +
+              '<span>期望产物：' + esc(c.expected_artifact || '—') + '</span>' +
+              (c.created_at ? '<span>创建于 ' + esc(fmtTime(c.created_at)) + '</span>' : '') +
+              (c.decided_at ? '<span>决策于 ' + esc(fmtTime(c.decided_at)) + '</span>' : '') +
+            '</div>' +
+            (pending ? '<div class="wb-collab-actions">' +
+              '<button class="wb-btn wb-btn-sm wb-btn-success" data-collab-accept="' + esc(c.id) + '">接受</button>' +
+              '<button class="wb-btn wb-btn-sm wb-btn-danger" data-collab-decline="' + esc(c.id) + '">拒绝</button>' +
+            '</div>' : '') +
+          '</div>';
+        }
+        box.innerHTML = html;
+
+        var accBtns = box.querySelectorAll('[data-collab-accept]');
+        for (var a = 0; a < accBtns.length; a++) {
+          (function (b) { b.addEventListener('click', function () { onCollab(b, 'accept'); }); })(accBtns[a]);
+        }
+        var decBtns = box.querySelectorAll('[data-collab-decline]');
+        for (var d = 0; d < decBtns.length; d++) {
+          (function (b) { b.addEventListener('click', function () { onCollab(b, 'decline'); }); })(decBtns[d]);
+        }
+      }
+      function onCollab(btn, action) {
+        var cid = btn.getAttribute(action === 'accept' ? 'data-collab-accept' : 'data-collab-decline');
+        btn.disabled = true; var old = btn.textContent; btn.textContent = '处理中…';
+        apiPost('update_collaboration', { id: cid, action: action }).then(function () {
+          showSuccess(action === 'accept' ? '已接受协作请求' : '已拒绝协作请求');
+          refreshTeamDetail();
+        }).catch(function (err) {
+          btn.disabled = false; btn.textContent = old;
+          showError('操作失败：' + (err && err.message ? err.message : err));
+        });
+      }
+
+      // ===== 渲染：成员 =====
+      function renderMembers() {
+        var box = $('member-list');
+        if (!state.members || state.members.length === 0) {
+          box.innerHTML = '<div class="wb-empty">暂无成员</div>';
+          return;
+        }
+        var html = '<table class="wb-table">' +
+          '<thead><tr>' +
+            '<th>角色标识</th><th>姓名</th><th>主理人</th><th>状态</th><th>职责</th>' +
+          '</tr></thead><tbody>';
+        for (var i = 0; i < state.members.length; i++) {
+          var m = state.members[i];
+          var isLead = m.is_lead === true || m.is_lead === 1 || m.is_lead === 'true';
+          var st = String(m.status || '—').toLowerCase();
+          var stTag = st === 'active' ? '<span class="wb-tag wb-tag-green">active</span>'
+            : (st === 'inactive' ? '<span class="wb-tag wb-tag-gray">inactive</span>'
+            : '<span class="wb-tag wb-tag-gray">' + esc(m.status || '—') + '</span>');
+          html += '<tr>' +
+            '<td style="font-family:ui-monospace,monospace;">' + esc(m.role_key || '—') + '</td>' +
+            '<td>' + esc(m.name || '—') + '</td>' +
+            '<td>' + (isLead ? '<span class="wb-badge-lead">主理人</span>' : '<span style="color:var(--wb-text-4);">—</span>') + '</td>' +
+            '<td>' + stTag + '</td>' +
+            '<td style="color:var(--wb-text-2);">' + esc(m.responsibilities || '—') + '</td>' +
+          '</tr>';
+        }
+        html += '</tbody></table>';
+
+        // AgentProfile 与 AgentRun 生命周期展示
+        html += '<div class="wb-lifecycle">' +
+          '<strong>AgentProfile（长期成员）生命周期：</strong> active（在职） ⇄ inactive（停用）<br/>' +
+          '<strong>AgentRun（执行实例）生命周期：</strong> ' +
+          'CREATED → CONTEXT_PREPARED → RUNNING ⇄ TOOL_WAIT → OUTPUT_SUBMITTED → CLOSED' +
+          '（异常分支：TIMED_OUT / FAILED / CANCELLED / QUARANTINED）' +
+        '</div>';
+        box.innerHTML = html;
+      }
+
+      // ===== 标签页切换 =====
+      function bindTabs() {
+        var tabs = document.querySelectorAll('.wb-tab');
+        for (var i = 0; i < tabs.length; i++) {
+          (function (t) {
+            t.addEventListener('click', function () {
+              var name = t.getAttribute('data-tab');
+              state.activeTab = name;
+              document.querySelectorAll('.wb-tab').forEach(function (el) { el.classList.remove('wb-tab-active'); });
+              t.classList.add('wb-tab-active');
+              document.querySelectorAll('.wb-tab-pane').forEach(function (el) { el.classList.remove('wb-active'); });
+              $('pane-' + name).classList.add('wb-active');
+            });
+          })(tabs[i]);
+        }
+      }
+
+      // ===== 过滤器（进行中 / 全部） =====
+      function bindFilter() {
+        var segs = document.querySelectorAll('.wb-seg-btn[data-filter]');
+        for (var i = 0; i < segs.length; i++) {
+          (function (s) {
+            s.addEventListener('click', function () {
+              var f = s.getAttribute('data-filter');
+              if (f === state.missionFilter) return;
+              state.missionFilter = f;
+              document.querySelectorAll('.wb-seg-btn[data-filter]').forEach(function (el) { el.classList.remove('wb-seg-active'); });
+              s.classList.add('wb-seg-active');
+              state.expandedMissionId = null;
+              state.missionDetailCache = {};
+              loadTeamDetail();
+            });
+          })(segs[i]);
+        }
+      }
+
+      // ===== 数据加载 =====
+      function loadTeamDetail() {
+        return getTeamDetail(state.teamKey, state.missionFilter).then(function (data) {
+          clearError();
+          state.team = data.team || null;
+          state.members = data.members || [];
+          state.missions = data.missions || [];
+          state.collaborations = data.collaborations || [];
+          // 清理失效的详情缓存（mission 可能因过滤变化而消失）
+          var validIds = {};
+          for (var i = 0; i < state.missions.length; i++) {
+            validIds[state.missions[i].id] = true;
+          }
+          Object.keys(state.missionDetailCache).forEach(function (k) {
+            if (!validIds[k]) delete state.missionDetailCache[k];
+          });
+          renderTeamInfo();
+          renderMissions();
+          renderCollaborations();
+          renderMembers();
+        }).catch(function (err) {
+          showError('加载工作区失败：' + (err && err.message ? err.message : err));
+          $('mission-list').innerHTML = '<div class="wb-empty">加载失败</div>';
+          $('collab-list').innerHTML = '<div class="wb-empty">加载失败</div>';
+          $('member-list').innerHTML = '<div class="wb-empty">加载失败</div>';
+        });
+      }
+      // 刷新（轮询用）：仅当存在进行中任务时静默刷新
+      function refreshTeamDetail() {
+        if (!state.teamKey) return;
+        getTeamDetail(state.teamKey, state.missionFilter).then(function (data) {
+          state.team = data.team || state.team;
+          state.members = data.members || state.members;
+          state.missions = data.missions || state.missions;
+          state.collaborations = data.collaborations || state.collaborations;
+          renderTeamInfo();
+          renderMissions();
+          renderCollaborations();
+          renderMembers();
+          // 若有展开的 mission，同时刷新其详情
+          if (state.expandedMissionId != null) {
+            // 重新拉取以更新 agent_runs
+            getMissionDetail(state.expandedMissionId).then(function (det) {
+              state.missionDetailCache[state.expandedMissionId] = det;
+              renderMissions();
+            }).catch(function () { /* 静默 */ });
+          }
+        }).catch(function () { /* 轮询失败静默，避免刷屏 */ });
+      }
+
+      function hasInProgressMissions() {
+        for (var i = 0; i < state.missions.length; i++) {
+          var st = String(state.missions[i].status || '').toUpperCase();
+          if (!MISSION_TERMINAL[st]) return true;
+        }
+        return false;
+      }
+
+      function startAutoRefresh() {
+        stopAutoRefresh();
+        state.refreshTimer = setInterval(function () {
+          // 非任务标签页或页面隐藏时跳过
+          if (document.hidden) return;
+          if (state.activeTab !== 'missions' && !hasInProgressMissions()) return;
+          refreshTeamDetail();
+        }, REFRESH_INTERVAL);
+      }
+      function stopAutoRefresh() {
+        if (state.refreshTimer) { clearInterval(state.refreshTimer); state.refreshTimer = null; }
+      }
+
+      // ===== 团队选择器 =====
+      function showTeamPicker() {
+        var sel = $('team-picker-select');
+        sel.innerHTML = '';
+        for (var i = 0; i < KNOWN_TEAMS.length; i++) {
+          var opt = document.createElement('option');
+          opt.value = KNOWN_TEAMS[i].team_key;
+          opt.textContent = KNOWN_TEAMS[i].name + '（' + KNOWN_TEAMS[i].team_key + '）';
+          sel.appendChild(opt);
+        }
+        $('team-picker').style.display = 'block';
+        $('workspace').style.display = 'none';
+        $('team-picker-go').addEventListener('click', function () {
+          var tk = sel.value;
+          if (!tk) return;
+          state.teamKey = tk;
+          setTeamKeyInUrl(tk);
+          $('team-picker').style.display = 'none';
+          $('workspace').style.display = 'grid';
+          loadTeamDetail().then(startAutoRefresh);
+        });
+      }
+
+      // ===== 启动 =====
+      function init() {
+        bindTabs();
+        bindFilter();
+        state.teamKey = getParam('team_key');
+        if (!state.teamKey) {
+          showTeamPicker();
+          return;
+        }
+        $('workspace').style.display = 'grid';
+        loadTeamDetail().then(startAutoRefresh);
+
+        // 页面可见性：隐藏时暂停轮询，可见时恢复
+        document.addEventListener('visibilitychange', function () {
+          if (document.hidden) {
+            stopAutoRefresh();
+          } else if (state.teamKey) {
+            refreshTeamDetail();
+            startAutoRefresh();
+          }
+        });
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
